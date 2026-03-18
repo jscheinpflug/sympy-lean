@@ -1,0 +1,16 @@
+name: Lean Action CI
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v5
+      - name: Doc harness check (warn mode)
+        run: python3 scripts/check_doc_harness.py --mode ci --scope core
+      - uses: leanprover/lean-action@v1
