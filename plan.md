@@ -1,159 +1,526 @@
- # SymbolicLean Implementation Plan Aligned With The Repo Harness
+ # SymbolicLean Project Plan
 
-  ## Summary
+## Project Motivation
 
-  - Implement SymbolicLean with a two-level typed architecture:
-    Term s σ for pure typed expression construction and Expr s σ for opaque session-scoped SymPy handles.
-  - Keep SymPy communication monadic in SymPyM; keep expression building pure.
-  - Treat the repo harness as part of the implementation contract:
-    /docs is canonical project knowledge, mirrored docs are required for core modules, and long-running plans must stay discoverable from docs/plans/index.md.
-  - Keep mathlib as the algebraic backbone and use the local Lean 4 workflow contract for all .lean work.
+SymbolicLean exists to make symbolic computation inside Lean typed, ergonomic, and explicit.
 
-  ## Harness Alignment
+Today, if a Lean user wants SymPy-level symbolic power, the usual options are poor:
+- drop to Python and lose type information,
+- pass raw strings around and hope they line up,
+- or try to rebuild large parts of a CAS inside Lean.
 
-  - Keep AGENTS.md index-only. Put implementation-facing project knowledge in /docs, not back into AGENTS.md.
-  - Preserve the current high-level exploration in plan.md, but add a concrete implementation artifact under docs/plans/ and link it from docs/plans/index.md.
-  - For every new core module under SymbolicLean/**, create the mirrored doc docs/<same path>.md in the same change set.
-  - Every mirrored doc must include exactly these level-2 sections:
-    ## Source, ## Responsibilities, ## Public Surface, ## Change Triggers, ## Related Files.
-  - Keep module responsibilities narrow so the mirrored docs stay small and localizable.
-  - Run the doc harness checker as part of implementation verification:
-    python3 scripts/check_doc_harness.py --mode local --scope core.
-  - Follow the repo Lean workflow contract:
-    use the local Lean 4 skill for .lean work, and source .agents/lean4-env.sh before any helper-script usage.
+This project takes a different route. We keep SymPy as the computation engine, but put a typed Lean interface around it so that:
+- symbolic expressions can be built inside Lean without stringly-typed glue,
+- illegal operations are rejected by Lean before they reach the backend,
+- the common workflows stay concise enough to feel like normal symbolic mathematics,
+- the boundary between Lean-side structure and SymPy-side computation stays explicit.
 
-  ## Human Digest
+The project is not trying to prove every SymPy computation correct, and it is not trying to reimplement SymPy inside Lean. The goal is a disciplined bridge:
+- Lean checks construction, typing, domain discipline, matrix dimensions, and session safety.
+- SymPy performs the actual symbolic computation.
 
-  - The earlier monadic-operator design was too awkward because it treated x + y like an RPC. That mixed “describe an expression” with “ask SymPy to compute”.
-  - The final design separates those concerns:
-    Term is pure data for symbolic expressions, Expr is a live backend object, and eval is the explicit boundary between them.
-  - This maps well to how people actually use a CAS:
-    blackboard expressions are built locally, while expensive transforms, solving, simplification, and matrix algorithms are effectful backend calls.
-  - The type system still carries the important invariants:
-    domain information, matrix dimensions, function arity, relation argument sorts, session scope, and typed solver result shapes.
-  - We trust SymPy for semantic correctness of computations, but Lean prevents illegal constructions and illegal API calls.
-  - Example:
-    term![x^2 + 2*x + 1] builds a Term s (.scalar QQ);
-    eval turns it into Expr s (.scalar QQ);
-    factor runs in SymPyM and returns another Expr s (.scalar QQ).
-  - Example:
-    term![A * v] typechecks only when matrix dimensions line up.
-    det only accepts square matrices with statically equal dimensions.
-  - Example:
-    let ode := term![diff (f x) x - f x = 0]
-    let sol ← dsolve ode f
-    where the front-door overload for dsolve accepts a Term and evaluates it internally, while the core implementation remains Expr-based.
+The success condition for v1 is:
+- common scalar, matrix, boolean, and solver workflows feel concise,
+- the interface is strongly typed enough to rule out obvious misuse,
+- the implementation structure is small, local, and self-documenting so future agents can extend it without re-reading the whole repo.
 
-  ## Core Design
+## Design Goals
 
-  - Define recursive domain descriptors:
-    GroundDom, DomainDesc := ground | polyRing | fracField | algExt | quotient.
-  - Define recursive semantic sorts:
-    SymSort ext := boolean | scalar d | matrix d m n | tensor d dims | set σ | tuple (List σ) | seq σ | map κ ν | fn (List σ) τ | relation rel (List σ) | ext ext.
-  - Use List, not Array, in recursive sort positions to avoid Lean unifier and deriving problems.
-  - Define runtime values as Expr s σ with SessionTok-scoped opaque refs.
-  - Replace the earlier global FormTag index with small refinement wrappers only where static refinement matters:
-    Symbol, FunSym, BoolExpr, RelExpr.
-  - Keep assumptions in session metadata rather than type indices, and expose them via typed APIs like ask.
-  - Define DomainCarrier, InterpretsDomain, and UnifyDomain so algebraic capabilities and mixed-domain arithmetic are encoded in types.
+### Primary Goals
 
-  ## Term And Expr Layers
+- Make symbolic expression building feel natural inside Lean.
+- Preserve strong typing for domains, dimensions, function arity, relations, and result shapes.
+- Keep backend interaction explicit and effectful.
+- Make the codebase easy to extend one file at a time.
 
-  - Keep Term s σ intentionally small and expression-oriented:
-    literals, atoms, arithmetic, negation, powers, function application, boolean connectives, equality/order/membership relations, derivatives, and the common unevaluated
-    calculus forms.
-  - Keep operator overloading only on Term; do not overload arithmetic directly on Expr.
-  - Keep all SymPy communication in:
-    SymPyM s := ReaderT SessionEnv (StateT SessionState (ExceptT SymPyError IO)).
-  - Use withSession : SessionConfig → (∀ s, SymPyM s α) → IO (Except SymPyError α) so backend handles cannot escape their session.
-  - Make eval : Term s σ → SymPyM s (Expr s σ) the main pure-to-effectful boundary.
-  - Keep transforms and queries at the Expr level:
-    simplify, factor, expand, cancel, det, inv, rref, eigenvals, solveset, solveUnivariate, dsolve, satisfiable, ask.
-  - Decode nontrivial runtime results into explicit Lean result types such as FiniteSolve, EvalOr, ODESolution, SolveSetResult, and matrix decomposition result records.
-  - Add thin user-facing overloads for selected high-frequency front doors so they accept either Term or Expr:
-    simplify, factor, expand, dsolve, solveset, satisfiable.
-    Keep the core implementations Expr-based; the overload layer is convenience only.
+### Non-Goals
 
-  ## Metaprogramming Layer
+- Do not model every SymPy API as one giant Lean AST.
+- Do not try to prove SymPy’s mathematics in v1.
+- Do not hide the session boundary everywhere.
+- Do not build giant “framework” modules that mix syntax, backend transport, types, and examples in one file.
 
-  - Add term![...] as the main expression quoter.
-      - It expands only to Term constructors and helpers.
-      - It must stay sort-agnostic; no scalar-only hardcoding.
-  - Add sympy d do ... as a convenience elaborator:
-      - opens withSession,
-      - installs a default scalar domain,
-      - brings smart constructors into scope.
-  - Add smart constructors:
-      - symbol, matrixSym, tensorSym, setSym,
-      - function1, function2, predicateSym,
-      - zero, one, numeric literal helpers,
-      - mkEq, mkMem, mkBool, mkRel.
-  - Add batch binders:
-      - symbols x y z
-      - functions f g
-      - optional assumption-bearing forms like symbols (x : positive) (y : real) z
-        These expand to repeated typed binder creation in the surrounding sympy ... do block.
-  - Add substitution notation:
-      - expr[x ↦ 2, y ↦ 3]
-        lowering to the ordinary typed substitution API.
-  - Add #sympy d <expr-or-call> as an exploratory command:
-      - spins up a temporary session,
-      - installs default domain d,
-      - auto-creates free scalar symbols for simple exploratory inputs,
-      - evaluates and pretty-prints results with logInfo,
-      - is documented as a REPL-like exploration tool, not production API.
-  - Implement declare_sympy_op as the scaling mechanism:
-      - generate typed Expr-level wrapper,
-      - request encoder,
-      - response decoder,
-      - docs,
-      - optional Term helper when the operation is expression-forming rather than query/transform.
-  - Keep the metaprogramming thin. The semantic source of truth is the typed core, not the macro layer.
-  - Defer richer scoped calculus notation like ∂/∫ until after term!, symbols, substitution sugar, and #sympy are stable.
+## Core Architecture
 
-  ## Backend Contract And Trust Boundary
+### Two-Level Design
 
-  - Use a persistent Python worker over JSON as the first transport.
-  - eval serializes a well-typed Term into one backend expression build/evaluation request.
-  - For eval, do not require heavy post-hoc sort validation; the emitted term is typed by construction.
-  - For nontrivial result APIs, decode and validate runtime structure as needed:
-    solver result cases,
-    dynamic dimensions,
-    optional/partial outcomes,
-    extension-family tags.
-  - Do not attempt proof-producing SymPy integration in v1.
-  - Keep the design compatible with future proof bridges by making export/import codecs explicit.
+The project is built around two different representations because they solve different problems.
 
-  ## Module And Doc Layout
+#### `Term s σ`
 
-  - Split the implementation into focused modules under SymbolicLean/ such as:
-    Core, Domain, Sort, Expr, Term, Session, Backend, Syntax/Term, Syntax/Binders, Syntax/Subst, Syntax/Command, Ops.
-  - For every new module, add the mirrored doc under docs/SymbolicLean/...lean.md with the required sections from the harness.
-  - Keep the root library module re-exporting the intended public surface and keep its mirrored doc current.
-  - Keep the docs discoverable from docs/index.md and keep the concrete implementation plan discoverable from docs/plans/index.md.
+`Term s σ` is a pure typed syntax tree for ordinary symbolic expressions.
 
-  ## Verification
+It exists so the user can write:
+- `x^2 + 2*x + 1`
+- `A * v`
+- `f x`
+- `x > 0 ∧ y < 1`
+- `diff (f x) x`
 
-  - Follow the Lean workflow contract:
-    source .agents/lean4-env.sh before helper scripts and use the local Lean 4 skill for Lean search, diagnostics, and build workflows.
-  - Use the normal verification ladder during implementation:
-    file diagnostics first, file-level Lean checks next, full lake build only at checkpoints and final integration gates.
-  - Add tests for:
-    matrix dimension rejection,
-    field-only operations like inv,
-    mixed-domain arithmetic through UnifyDomain,
-    batch binder sugar,
-    substitution notation,
-    #sympy exploratory command behavior,
-    structured decoding for solver results.
-  - Run the doc harness checker whenever new core modules or mirrored docs are added or moved.
+without turning every operator into an effectful backend call.
 
-  ## Assumptions And Defaults
+`Term` is the blackboard layer. It should be easy to build, typecheck, inspect, elaborate from syntax, and serialize.
 
-  - mathlib is a required dependency.
-  - The initial backend is a persistent JSON worker around SymPy.
-  - Term is intentionally a common expression fragment, not a full mirror of all SymPy APIs.
-  - Specialized SymPy families are covered by SymSort ext and typed Expr-level APIs, not by endlessly growing the Term AST.
-  - Manual equality/hash instances for recursive core datatypes are acceptable if Lean deriving is unreliable.
-  - Unary symbolic-function application gets the ergonomic path first; higher arities use explicit helpers unless a clean general encoding proves stable.
-  - Sugar is allowed only when it lowers directly to the typed core and remains documented as part of the public syntax surface.
+#### `SymExpr s σ`
+
+`SymExpr s σ` is an opaque handle to a live SymPy object inside a session.
+
+It exists because real SymPy objects are effectful resources:
+- they live in a backend process,
+- they require IO,
+- they can fail to build or transform,
+- they benefit from caching and reference reuse,
+- they should not escape the session that created them.
+
+`SymExpr` is the computation layer. Most actual CAS operations happen here.
+
+#### Why the split matters
+
+Earlier designs tried to make even basic symbolic arithmetic monadic. That was the wrong level of abstraction. It made `x + y` feel like an RPC and created unnecessary elaboration complexity.
+
+The final split is:
+- `Term` for describing symbolic expressions,
+- `SymExpr` for asking SymPy to compute.
+
+That is simpler, more ergonomic, and easier to type.
+
+## Session Model
+
+All SymPy interaction lives inside:
+
+```lean
+withSession : SessionConfig → (∀ s, SymPyM s α) → IO (Except SymPyError α)
+```
+
+This exists for one core reason: session-scoped handles must not escape.
+
+The universal quantifier `∀ s` makes the session token abstract. A `SymExpr s σ` can only be used inside the session that created it. This gives a strong safety guarantee without runtime bookkeeping hacks.
+
+`SymPyM` should carry:
+- read-only transport and config,
+- mutable session-local state,
+- typed error handling,
+- outer `IO` for the actual worker communication.
+
+Expected shape:
+
+```lean
+abbrev SymPyM (s : SessionTok) :=
+  ReaderT SessionEnv <| StateT SessionState <| ExceptT SymPyError IO
+```
+
+## Type Layer
+
+### Domains: `DomainDesc`
+
+`DomainDesc` models the algebraic domain attached to symbolic objects.
+
+It exists because domain information changes which operations are legal and what their results mean.
+
+Examples:
+- scalar arithmetic over `ZZ` vs `QQ`,
+- field-only operations like inversion,
+- polynomial rings,
+- fraction fields,
+- algebraic extensions,
+- quotients.
+
+The core shape is:
+
+```lean
+GroundDom := ZZ | QQ | RR | CC | gaussianZZ | GF p
+
+DomainDesc :=
+| ground
+| polyRing
+| fracField
+| algExt
+| quotient
+```
+
+This must be recursive. A flat domain enum would not be expressive enough for actual SymPy usage.
+
+### Sorts: `SymSort ext`
+
+`SymSort ext` models what kind of symbolic object we have.
+
+It exists so that the interface can distinguish:
+- booleans,
+- scalars,
+- matrices,
+- tensors,
+- sets,
+- tuples,
+- sequences,
+- maps,
+- functions,
+- relations,
+- specialized SymPy families.
+
+Planned shape:
+
+```lean
+SymSort ext :=
+| boolean
+| scalar d
+| matrix d m n
+| tensor d dims
+| set σ
+| tuple (List σ)
+| seq σ
+| map κ ν
+| fn (List σ) τ
+| relation rel (List σ)
+| ext ext
+```
+
+Important decision:
+- use `List`, not `Array`, in recursive sort positions.
+
+Why:
+- Lean elaboration and deriving behave better with recursive `List`-based structures,
+- this avoids the issues already identified around recursive arrays and `CoeFun`-style typing,
+- runtime arrays can still be used in non-recursive payloads.
+
+### Refinement Wrappers
+
+Some operations depend on more than just the coarse sort. For example:
+- `ask` wants symbols,
+- `dsolve` wants a function symbol,
+- boolean APIs want boolean expressions,
+- relation-oriented APIs benefit from a relation wrapper.
+
+Instead of carrying a global `FormTag` parameter on every symbolic value, use small wrappers:
+- `SymSymbol`
+- `SymFun`
+- `SymBool`
+- `SymRel`
+
+Why:
+- the refinement tax only appears where needed,
+- most ordinary symbolic code stays simple,
+- the public surface is easier to read.
+
+## Algebraic Bridge
+
+The project should not reinvent an algebra hierarchy. It should use `mathlib`.
+
+The symbolic domain layer therefore needs a bridge into Lean-side algebraic capabilities:
+- `DomainCarrier`
+- `InterpretsDomain`
+- `UnifyDomain`
+
+These exist for different reasons:
+- `DomainCarrier` says what Lean carrier type a symbolic domain corresponds to when that interpretation is available.
+- `InterpretsDomain` says which algebraic structures hold on that carrier.
+- `UnifyDomain` computes the output domain for mixed-domain symbolic arithmetic.
+
+Example motivations:
+- `inv` should require a field-like domain.
+- `ZZ + QQ` should land in `QQ`.
+- matrix inversion should inherit the domain constraint of its scalar entries.
+
+## Pure Expression Layer
+
+### What belongs in `Term`
+
+`Term` should stay small and expression-oriented.
+
+Include:
+- atoms,
+- scalar literals,
+- arithmetic,
+- negation,
+- powers,
+- unary function application,
+- boolean connectives,
+- equality, inequalities, membership,
+- derivative,
+- a small set of common unevaluated calculus forms.
+
+### What does not belong in `Term`
+
+Do not put general CAS transforms or queries into `Term`.
+
+Keep these out:
+- `simplify`
+- `factor`
+- `expand`
+- `det`
+- `rref`
+- `solveset`
+- `dsolve`
+- `satisfiable`
+
+Why:
+- they are backend computations, not expression constructors,
+- they often have structured or partial results,
+- they belong in `SymPyM`.
+
+## Backend Computation Layer
+
+The backend layer exists to do real work against SymPy.
+
+Core operations should be defined over `SymExpr` and run in `SymPyM`, for example:
+- `simplify`
+- `factor`
+- `expand`
+- `cancel`
+- `subs`
+- `diffExpr`
+- `integrate`
+- `limit`
+- `det`
+- `inv`
+- `rref`
+- `solveUnivariate`
+- `solveset`
+- `dsolve`
+- `satisfiable`
+- `ask`
+
+For common user-facing APIs, a very small overload layer may accept either `Term` or `SymExpr` and evaluate `Term` internally. This should be used sparingly, only on a few high-frequency front doors.
+
+Why:
+- users should not have to write `eval` by hand in the most obvious cases,
+- but the architecture should still preserve the distinction between pure expression building and effectful computation.
+
+## Trust Boundary
+
+The trust model must stay explicit.
+
+Lean guarantees:
+- expressions are well-sorted,
+- domains and dimensions are respected,
+- refinement-sensitive APIs get the right wrapper types,
+- session handles do not escape.
+
+SymPy is trusted to:
+- perform symbolic simplification,
+- solve equations,
+- manipulate matrices,
+- answer assumption and logic queries correctly.
+
+Implication for implementation:
+- `eval : Term s σ → SymPyM s (SymExpr s σ)` can trust sort preservation because the serializer is produced from a typed `Term`,
+- but structured runtime results still need decoding and lightweight validation.
+
+Examples of results that should be decoded explicitly:
+- finite solve results,
+- solver case splits,
+- ODE solution shapes,
+- dynamic dimensions,
+- extension-family tags.
+
+## Syntax And Metaprogramming
+
+Metaprogramming is important, but it should stay thin.
+
+### `term![...]`
+
+This is the main user-facing quoter for building pure symbolic expressions.
+
+It exists to keep ordinary symbolic math readable while elaborating to the typed `Term` core.
+
+It should support in v1:
+- identifiers,
+- numerals,
+- unary minus,
+- `+ - * / ^`,
+- unary function application,
+- boolean connectives,
+- relations,
+- membership,
+- derivative syntax.
+
+### `sympy d do ...`
+
+This is the session-opening syntax.
+
+It exists so users can write compact symbolic workflows without repeating the session plumbing and default scalar domain setup.
+
+It should:
+- open a `withSession`,
+- install default scalar domain `d`,
+- bring smart constructors and binder sugar into scope,
+- preserve session non-escape.
+
+### `symbols` and `functions`
+
+These are binder macros for repeated symbol/function creation.
+
+They exist because the raw constructor form is repetitive and distracts from the actual mathematics.
+
+Examples:
+- `symbols x y z`
+- `functions f g`
+- `symbols (x : positive) (y : real) z`
+
+### Substitution sugar
+
+Notation like:
+
+```lean
+expr[x ↦ 2, y ↦ 3]
+```
+
+exists because substitution is common enough to justify direct syntax.
+
+It must lower to the ordinary typed substitution API rather than inventing a second semantic path.
+
+### `#sympy`
+
+This is an exploratory command.
+
+It exists to make the library usable in a REPL-like way during development and experimentation.
+
+For v1, keep the scope deliberately narrow:
+- scalar exploration only,
+- auto-create free scalar symbols,
+- pretty-print results,
+- no automatic matrix or function synthesis.
+
+### `declare_sympy_op`
+
+This is the scaling mechanism for wrapper generation.
+
+It exists because hand-writing every encoder, decoder, wrapper, and docstring will not scale.
+
+It should generate:
+- a typed `SymExpr`-level wrapper,
+- request encoding,
+- result decode hooks,
+- a docstring,
+- optionally a `Term` helper only when the operation is expression-forming.
+
+## Backend Transport
+
+The first backend should be a persistent Python worker speaking JSON.
+
+Why:
+- simple to debug,
+- transport-agnostic enough to replace later,
+- supports session-local refs naturally,
+- easy to inspect during bring-up.
+
+Planned responsibilities:
+- create symbols,
+- create function symbols,
+- evaluate serialized terms,
+- apply named operations,
+- pretty-print symbolic results,
+- release refs when the session closes.
+
+## Module And File Structure
+
+The code should be self-documenting by structure, not by giant comments.
+
+### Folder responsibilities
+
+- `Domain/`: algebraic domains and domain interpretation
+- `Sort/`: symbolic object families and relation kinds
+- `SymExpr/`: opaque backend handles and refinement wrappers
+- `Session/`: state, errors, and monad
+- `Term/`: the pure expression language
+- `Backend/`: transport, encoding, decoding, worker client
+- `Ops/`: effectful symbolic APIs
+- `Syntax/`: macros, elaborators, binder sugar, exploratory commands
+- `Examples/`: canonical user-facing usage slices
+
+### File-size policy
+
+Files should usually stay around 80-150 lines and be split before they become kitchen-sink modules.
+
+This matters because:
+- smaller files are easier for agents to understand locally,
+- mirrored docs stay short and specific,
+- change triggers become clearer,
+- API ownership stays obvious.
+
+Example:
+- do not put all term constructors, arithmetic instances, and syntax helpers into one `Term.lean`,
+- instead use `Term/Core.lean`, `Term/Arithmetic.lean`, `Term/Logic.lean`, and so on.
+
+## Documentation Harness Alignment
+
+The repo contract matters as much as the code.
+
+Therefore:
+- `AGENTS.md` stays index-only,
+- canonical implementation guidance lives in `/docs`,
+- every core `SymbolicLean/**` source file gets a mirrored doc,
+- plan artifacts live under `docs/plans/`.
+
+The mirrored docs are not optional polish. They are part of how future agents localize changes without reopening the entire project.
+
+## Example Workflows
+
+### Scalar expression and factorization
+
+```lean
+sympy QQ do
+  symbols x y
+  let e := term![x^2 + 2*x*y + y^2]
+  factor e
+```
+
+What this demonstrates:
+- pure expression building through `term!`,
+- default scalar domain installation,
+- front-door overload from `Term` into the effectful `factor` API.
+
+### Matrix typing
+
+```lean
+sympy QQ do
+  let A : Term s (.matrix qq (.static 3) (.static 3)) := ...
+  let v : Term s (.matrix qq (.static 3) (.static 1)) := ...
+  let p := term![A * v]
+  eval p
+```
+
+What this demonstrates:
+- dimensions are checked in Lean,
+- illegal matrix products fail before backend evaluation.
+
+### ODE workflow
+
+```lean
+sympy QQ do
+  symbols x
+  functions f
+  let ode := term![diff (f x) x - f x = 0]
+  dsolve ode f
+```
+
+What this demonstrates:
+- function symbols,
+- derivative syntax,
+- relation construction,
+- a solver front door that accepts a `Term`.
+
+## Delivery Strategy
+
+Implementation should proceed in layers:
+1. bootstrap the repo and module graph,
+2. land the typed core,
+3. land session and backend transport,
+4. land the pure `Term` layer,
+5. land effectful `Ops`,
+6. land syntax sugar,
+7. land generated wrappers,
+8. land examples and verification.
+
+This order matters because each later layer depends on the correctness and clarity of the earlier ones.
+
+## Definition Of Done
+
+The project reaches the planned v1 milestone when:
+- `mathlib` is integrated,
+- the `Term` / `SymExpr` split is reflected in code,
+- the session model prevents handle escape,
+- core scalar, matrix, boolean, and solver flows work,
+- `term!`, `sympy`, `symbols`, substitution sugar, and `#sympy` exist in their planned scopes,
+- mirrored docs exist for the new module tree,
+- the codebase remains small-file and self-documenting,
+- a no-context agent can extend the system by reading the local file plus its mirrored doc.

@@ -1,166 +1,355 @@
-  # SymbolicLean Execution Checklist
+# SymbolicLean Execution Checklist
 
-  ## Summary
+This file is the implementation checklist. Each item explains why it exists, what to do, and what counts as done. If a task changes architecture, update `plan.md` first.
 
-  - This replaces the earlier checklist and fixes the remaining execution ambiguities: concrete names, exact module tree, syntax scope, backend protocol, test layout, and
-    docs-harness updates.
-  - Naming decision: use SymExpr instead of Expr to avoid confusion with Lean.Expr.
-  - Self-documenting structure decision: target files at roughly 80-150 LOC, split before ~200 LOC, and name files by one concept or one API slice.
+## Phase 0: Planning And Standards
 
-  ## 0. Harness And Standards
+- [ ] Add the project motivation section to `plan.md`.
+  Why: new contributors need the problem statement and trust model before they can judge design tradeoffs.
+  Do: describe why the project exists, what it is trying to make possible, and what it is not trying to do.
+  Done when: `plan.md` explains the motivation, success criteria, and non-goals in plain language.
 
-  - [ ] Update docs/standards/lean-engineering.md to state:
-    small focused files, folders by responsibility, file names by concept, split before kitchen-sink modules.
-  - [ ] Update docs/architecture.md to state that mirrored docs plus narrow modules are the main self-documenting mechanism.
-  - [ ] Add docs/plans/symboliclean-implementation.md and link it from docs/plans/index.md.
-  - [ ] Keep AGENTS.md unchanged as index-only; do not move canonical guidance back into it.
-  - [ ] For every new SymbolicLean/** file, add the mirrored doc docs/<same path>.md with the required five ## sections.
+- [ ] Replace the old high-level checklist in `todo.md` with this execution-oriented checklist.
+  Why: agents need an operational document, not just architecture notes.
+  Do: keep tasks checkable, local, and explicit about purpose and completion criteria.
+  Done when: a no-context implementer can follow the file top to bottom without inventing missing steps.
 
-  ## 1. Bootstrap
+- [ ] Add explicit small-file guidance to `docs/standards/lean-engineering.md`.
+  Why: the repo currently prefers composable definitions, but the plan now depends on narrow, self-documenting files.
+  Do: add guidance for 80-150 LOC target, split-before-200 LOC, one responsibility per file, and folders by concern.
+  Done when: the standards doc clearly tells future agents not to create kitchen-sink modules.
 
-  - [ ] Add mathlib to lakefile.toml.
-  - [ ] Replace the placeholder root exports in SymbolicLean.lean with the real module graph.
-  - [ ] Keep Main.lean as a tiny smoke/demo entrypoint only.
-  - [ ] Verify bootstrap with source .agents/lean4-env.sh && lake build.
+- [ ] Add one short note to `docs/architecture.md` about self-documenting structure.
+  Why: mirrored docs only work well if the source tree is already narrow and well named.
+  Do: state that mirrored docs plus small responsibility-aligned files are the main localization mechanism.
+  Done when: the architecture doc says this explicitly.
 
-  ## 2. Final Module Tree
+- [ ] Add `docs/plans/symboliclean-implementation.md` and link it from `docs/plans/index.md`.
+  Why: the repo harness expects discoverable long-running plans under `/docs/plans`.
+  Do: summarize the final architecture and point back to `plan.md` and `todo.md`.
+  Done when: `docs/plans/index.md` links to the new implementation plan artifact.
 
-  - [ ] Create SymbolicLean/Domain/Dim.lean.
-  - [ ] Create SymbolicLean/Domain/VarCtx.lean.
-  - [ ] Create SymbolicLean/Domain/Desc.lean.
-  - [ ] Create SymbolicLean/Domain/Classes.lean.
-  - [ ] Create SymbolicLean/Sort/Relations.lean.
-  - [ ] Create SymbolicLean/Sort/Ext.lean.
-  - [ ] Create SymbolicLean/Sort/Base.lean.
-  - [ ] Create SymbolicLean/SymExpr/Core.lean.
-  - [ ] Create SymbolicLean/SymExpr/Refined.lean.
-  - [ ] Create SymbolicLean/Session/Errors.lean.
-  - [ ] Create SymbolicLean/Session/State.lean.
-  - [ ] Create SymbolicLean/Session/Monad.lean.
-  - [ ] Create SymbolicLean/Term/Core.lean.
-  - [ ] Create SymbolicLean/Term/Literals.lean.
-  - [ ] Create SymbolicLean/Term/Arithmetic.lean.
-  - [ ] Create SymbolicLean/Term/Logic.lean.
-  - [ ] Create SymbolicLean/Term/Relations.lean.
-  - [ ] Create SymbolicLean/Term/Calculus.lean.
-  - [ ] Create SymbolicLean/Term/Application.lean.
-  - [ ] Create SymbolicLean/Backend/Protocol.lean.
-  - [ ] Create SymbolicLean/Backend/Encode.lean.
-  - [ ] Create SymbolicLean/Backend/Decode.lean.
-  - [ ] Create SymbolicLean/Backend/Client.lean.
-  - [ ] Create SymbolicLean/Ops/Core.lean.
-  - [ ] Create SymbolicLean/Ops/Algebra.lean.
-  - [ ] Create SymbolicLean/Ops/Calculus.lean.
-  - [ ] Create SymbolicLean/Ops/LinearAlgebra.lean.
-  - [ ] Create SymbolicLean/Ops/Solvers.lean.
-  - [ ] Create SymbolicLean/Syntax/Term.lean.
-  - [ ] Create SymbolicLean/Syntax/Binders.lean.
-  - [ ] Create SymbolicLean/Syntax/Subst.lean.
-  - [ ] Create SymbolicLean/Syntax/Command.lean.
-  - [ ] Create SymbolicLean/Syntax/DeclareOp.lean.
-  - [ ] Create SymbolicLean/Examples/Scalars.lean.
-  - [ ] Create SymbolicLean/Examples/Matrices.lean.
-  - [ ] Create SymbolicLean/Examples/Solvers.lean.
-  - [ ] Create SymbolicLean/Examples/Negative.lean.
-  - [ ] Create SymbolicLean/Examples.lean re-exporting the example modules.
+## Phase 1: Bootstrap And Public Module Surface
 
-  ## 3. Concrete Core Names And Types
+- [ ] Add `mathlib` to `lakefile.toml`.
+  Why: the symbolic domain layer needs real algebraic capabilities instead of a local hierarchy clone.
+  Do: add the dependency and refresh manifests if required.
+  Done when: `lake build` succeeds with `mathlib` installed.
 
-  - [ ] In Sort/Ext.lean, define a concrete project extension enum SymExt with grouped constructors for at least geometry, combinatorics, stats, physics, indexedTensor,
-    codegen, numberTheory, and other Name.
-  - [ ] In Sort/Base.lean, define inductive SymSort (ext : Type) and export abbrev SSort := SymSort SymExt.
-  - [ ] In Domain/Desc.lean, define GroundDom, PolyPresentation, AlgRelation, IdealRelation, and recursive DomainDesc.
-  - [ ] In Sort/Relations.lean, define Truth and RelKind.
-  - [ ] Use List, not Array, in recursive sort positions.
-  - [ ] Add manual DecidableEq/BEq/Hashable implementations anywhere deriving fails.
+- [ ] Replace placeholder exports in `SymbolicLean.lean`.
+  Why: the root module should describe the real public surface as the implementation grows.
+  Do: re-export the intended top-level domain, sort, expression, session, term, ops, syntax, and examples modules.
+  Done when: users can import `SymbolicLean` and reach the main public API from there.
 
-  ## 4. Runtime And Session Layer
+- [ ] Keep `Main.lean` as a minimal smoke/demo entrypoint.
+  Why: examples should live in `SymbolicLean/Examples`, not in the executable root.
+  Do: keep `Main.lean` tiny and descriptive, or leave a minimal demo path only.
+  Done when: `Main.lean` is not carrying library logic.
 
-  - [ ] In SymExpr/Core.lean, define opaque SessionTok, structure Ref, and structure SymExpr (s : SessionTok) (σ : SSort).
-  - [ ] In SymExpr/Refined.lean, define SymSymbol, SymFun, SymBool, and SymRel.
-  - [ ] In Session/Errors.lean, define typed backend, decode, and user-surface errors.
-  - [ ] In Session/State.lean, define handle tables, symbol assumptions metadata, caches, and dynamic shape metadata.
-  - [ ] In Session/Monad.lean, define SymPyM := ReaderT SessionEnv (StateT SessionState (ExceptT SymPyError IO)) and withSession : SessionConfig -> (∀ s, SymPyM s α) -> IO
-    (Except SymPyError α).
-  - [ ] Ensure handles cannot escape sessions at the type level.
+- [ ] Create the final folder tree under `SymbolicLean/`.
+  Why: the architecture depends on separating concerns cleanly so files remain small and local.
+  Do: create `Domain`, `Sort`, `SymExpr`, `Session`, `Term`, `Backend`, `Ops`, `Syntax`, and `Examples`.
+  Done when: the directory structure matches `plan.md` and no folder mixes unrelated concerns.
 
-  ## 5. Algebraic Bridge
+## Phase 2: Domain And Sort Core
 
-  - [ ] In Domain/Classes.lean, define DomainCarrier, InterpretsDomain, and UnifyDomain.
-  - [ ] Add instances for ZZ, QQ, RR, CC, gaussianZZ, GF p.
-  - [ ] Add recursive propagation instances for polyRing, fracField, algExt, and quotient.
-  - [ ] Add explicit tests that ZZ + QQ -> QQ and same-domain arithmetic uses reflexive UnifyDomain.
+- [ ] Implement `SymbolicLean/Domain/Dim.lean`.
+  Why: matrices and tensors need a first-class dimension type at the core of the design.
+  Do: define `Dim := static Nat | dyn Name`.
+  Done when: dimensions can be used in matrix and tensor sorts without placeholder types.
 
-  ## 6. Pure Term Layer
+- [ ] Implement `SymbolicLean/Domain/VarCtx.lean`.
+  Why: polynomial and algebraic-extension domains need explicit variable contexts.
+  Do: define `VarCtx`, store ordered variable names, and keep the `Nodup` invariant.
+  Done when: polynomial-related domain constructors can refer to a stable variable context.
 
-  - [ ] In Term/Core.lean, define inductive Term (s : SessionTok) : SSort -> Type.
-  - [ ] Keep v1 constructors limited to: atom, scalar literals, add/sub/mul/div/pow/neg, unary function application, boolean connectives, equality/order/membership,
-    derivative, and common unevaluated calculus forms.
-  - [ ] In Term/Arithmetic.lean, define CanAdd, CanMul, CanPow and standard operator instances on Term.
-  - [ ] In Term/Logic.lean, define CanLogic.
-  - [ ] In Term/Relations.lean, define CanCompare.
-  - [ ] In Term/Application.lean, support unary symbolic function application in syntax; provide explicit appN helpers for arity > 1.
-  - [ ] Do not add monadic operator instances anywhere.
+- [ ] Implement `SymbolicLean/Domain/Desc.lean`.
+  Why: the domain language determines which symbolic operations are legal and how results are interpreted.
+  Do: define `GroundDom`, `PolyPresentation`, `AlgRelation`, `IdealRelation`, and recursive `DomainDesc`.
+  Done when: the domain layer can express ground domains, polynomial rings, fraction fields, algebraic extensions, and quotients.
 
-  ## 7. Backend Protocol
+- [ ] Implement `SymbolicLean/Domain/Classes.lean`.
+  Why: domain descriptions need a bridge to Lean-side algebraic structure and mixed-domain arithmetic.
+  Do: define `DomainCarrier`, `InterpretsDomain`, and `UnifyDomain`.
+  Done when: APIs can state field-like requirements and mixed-domain arithmetic has a typed output domain.
 
-  - [ ] Implement tools/sympy_worker.py with JSON commands:
-    ping, mk_symbol, mk_function, eval_term, apply_op, pretty, release.
-  - [ ] In Backend/Protocol.lean, define the request/response schema matching those commands.
-  - [ ] In Backend/Encode.lean, serialize Term to eval_term payloads.
-  - [ ] In Backend/Decode.lean, decode structured result payloads for solver and other nontrivial APIs.
-  - [ ] In Backend/Client.lean, implement worker lifecycle, request dispatch, and ref bookkeeping.
-  - [ ] Keep eval : Term s σ -> SymPyM s (SymExpr s σ) trusted on sort preservation; reserve runtime decoding for structured outputs.
+- [ ] Implement `SymbolicLean/Sort/Relations.lean`.
+  Why: boolean truth values and relation kinds are shared across the sort layer and the term language.
+  Do: define `Truth` and `RelKind`.
+  Done when: the rest of the sort layer can depend on a stable relation vocabulary.
 
-  ## 8. Core Operations
+- [ ] Implement `SymbolicLean/Sort/Ext.lean`.
+  Why: the framework needs a typed story for specialized SymPy families without collapsing to raw strings.
+  Do: define a concrete `SymExt` enum covering at least geometry, combinatorics, stats, physics, indexed tensors, codegen, number theory, and a fallback like `other Name`.
+  Done when: extension-family values can appear in `SymSort`.
 
-  - [ ] In Ops/Algebra.lean, implement simplify, factor, expand, cancel, and subs.
-  - [ ] In Ops/Calculus.lean, implement diffExpr, integrate, limit, and minimal series support.
-  - [ ] In Ops/LinearAlgebra.lean, implement det, inv, and rref.
-  - [ ] In Ops/Solvers.lean, implement solveUnivariate, solveset, dsolve, satisfiable, and ask.
-  - [ ] Define explicit structured result types: FiniteSolve, EvalOr, ODESolution, and SolveSetResult.
-  - [ ] In Ops/Core.lean, define a tiny IntoSymExpr class with only SymExpr and Term instances, and use it only for selected front-door APIs:
-    simplify, factor, expand, dsolve, solveset, satisfiable.
+- [ ] Implement `SymbolicLean/Sort/Base.lean`.
+  Why: every term and backend handle is indexed by a symbolic object family.
+  Do: define `SymSort ext` and export `abbrev SSort := SymSort SymExt`.
+  Done when: the sort language can represent booleans, scalars, matrices, tensors, sets, tuples, sequences, maps, functions, relations, and extension families.
 
-  ## 9. Syntax And Sugar
+- [ ] Use `List` in recursive sort positions.
+  Why: recursive `Array` positions already caused elaboration and deriving problems in review.
+  Do: keep `tuple`, `fn`, and `relation` list-based, even if runtime payloads use arrays elsewhere.
+  Done when: recursive sorts compile cleanly and no recursive `Array (SymSort ...)` remains.
 
-  - [ ] In Syntax/Term.lean, implement term![...] expanding only to Term constructors and helpers.
-  - [ ] Scope of term! in v1: identifiers, numerals, unary minus, + - * / ^, unary application f(x), relations, boolean connectives, membership, and derivative syntax.
-  - [ ] In Syntax/Binders.lean, implement symbols x y z and functions f g.
-  - [ ] In Syntax/Binders.lean, add optional assumption syntax:
-    symbols (x : positive) (y : real) z.
-  - [ ] In Syntax/Subst.lean, implement substitution sugar:
-    expr[x ↦ 2, y ↦ 3].
-  - [ ] In Syntax/Command.lean, implement sympy d do ....
-  - [ ] In Syntax/Command.lean, implement #sympy d ... with this exact v1 scope:
-    scalar exploratory expressions only, auto-create free scalar symbols in domain d, no auto function or matrix creation.
-  - [ ] Keep ∂ and ∫ notation out of v1 unless everything above lands cleanly and the files stay small.
+- [ ] Add manual `DecidableEq` / `BEq` / `Hashable` only where deriving fails.
+  Why: the design should not depend on fragile deriving success for recursive datatypes.
+  Do: try deriving first; if Lean resists, write manual instances in the smallest local file.
+  Done when: the core recursive types have stable equality and hashing support.
 
-  ## 10. Generated Operation Layer
+## Phase 3: Runtime Handle And Session Layer
 
-  - [ ] In Syntax/DeclareOp.lean, implement declare_sympy_op.
-  - [ ] Make it generate: typed wrapper, encoder, decoder hook, and docstring.
-  - [ ] Support optional Term helpers only for expression-forming operations.
-  - [ ] Migrate one algebra op, one linear-algebra op, and one solver op onto declare_sympy_op before calling the generator complete.
+- [ ] Implement `SymbolicLean/SymExpr/Core.lean`.
+  Why: the project needs a Lean-side name for live backend objects that does not conflict with `Lean.Expr`.
+  Do: define `opaque SessionTok`, `Ref`, and `SymExpr (s : SessionTok) (σ : SSort)`.
+  Done when: runtime symbolic values can be referenced abstractly and typed by sort.
 
-  ## 11. Examples And Negative Cases
+- [ ] Implement `SymbolicLean/SymExpr/Refined.lean`.
+  Why: some APIs require symbols, function symbols, booleans, or relations specifically.
+  Do: define `SymSymbol`, `SymFun`, `SymBool`, and `SymRel` as thin wrappers over `SymExpr`.
+  Done when: symbol-only and relation-specific APIs can require these wrappers instead of ad hoc runtime checks.
 
-  - [ ] In Examples/Solvers.lean, add dsolve, solveset, satisfiable, and ask examples.
-    symbol.
-  - [ ] Re-export them from Examples.lean.
+- [ ] Implement `SymbolicLean/Session/Errors.lean`.
+  Why: the backend boundary needs typed failures rather than stringly error handling.
+  Do: define worker, decode, protocol, and user-surface errors.
+  Done when: `SymPyM` can fail with structured error types.
 
-  ## 12. Verification
+- [ ] Implement `SymbolicLean/Session/State.lean`.
+  Why: sessions own handle lifetimes, assumption metadata, caches, and dynamic backend facts.
+  Do: store live handles, symbol assumptions, canonicalization caches, and any dynamic shape/domain metadata needed for decoded results.
+  Done when: a session has a well-defined local state structure with no backend-global hidden mutable state.
 
-  - [ ] Use Lean LSP diagnostics first on each file; source .agents/lean4-env.sh before helper-script usage.
-  - [ ] Run lake build once imports stabilize.
-  - [ ] Run python3 scripts/check_doc_harness.py --mode local --scope core.
-  - [ ] Do one manual smoke pass with #sympy QQ simplify(x^2 + 2*x + 1) and at least one sympy QQ do ... example.
-  - [ ] Do not close the task until code, mirrored docs, examples, and harness checks all pass together.
+- [ ] Implement `SymbolicLean/Session/Monad.lean`.
+  Why: all backend communication is effectful and should live in one explicit monad.
+  Do: define `SymPyM := ReaderT SessionEnv (StateT SessionState (ExceptT SymPyError IO))` and `withSession`.
+  Done when: backend APIs can run inside a session and produce typed results or typed errors.
 
-  ## Done Criteria
+- [ ] Preserve handle non-escape by construction.
+  Why: session safety is one of the key type-level guarantees of the entire project.
+  Do: keep public handle-returning APIs under `∀ s` and do not leak raw refs.
+  Done when: a `SymExpr s σ` cannot be stored or returned outside the session scope.
 
-  - [ ] The codebase uses the planned small-file, self-documenting folder structure.
-  - [ ] Every core module has a mirrored doc and the doc harness passes.
-  - [ ] lake build passes.
-  - [ ] The examples compile and show the intended UX.
-  - [ ] User-facing symbolic expression construction is pure Term; backend communication is monadic SymPyM; no monadic arithmetic leaks into the surface API.
+## Phase 4: Algebraic Bridge
+
+- [ ] Add `InterpretsDomain` instances for the ground domains.
+  Why: users need field/ring-sensitive operations to typecheck immediately on the common domains.
+  Do: cover `ZZ`, `QQ`, `RR`, `CC`, `gaussianZZ`, and `GF p`.
+  Done when: field-only and ring-only APIs can be stated over those domains.
+
+- [ ] Add recursive propagation instances for composite domains.
+  Why: the recursive domain language is useless unless capabilities propagate through it.
+  Do: define the expected behavior for `polyRing`, `fracField`, `algExt`, and `quotient`.
+  Done when: the typeclass layer can infer the right algebraic capability on those constructions.
+
+- [ ] Implement and test `UnifyDomain`.
+  Why: mixed-domain symbolic arithmetic is common and must not rely on ad hoc operator overlap.
+  Do: add reflexive and mixed-domain instances such as `ZZ + QQ -> QQ`.
+  Done when: scalar arithmetic uses a single domain-unification path for both same-domain and mixed-domain cases.
+
+## Phase 5: Pure Term Language
+
+- [ ] Implement `SymbolicLean/Term/Core.lean`.
+  Why: users need a pure typed symbolic language before any backend calls happen.
+  Do: define `Term (s : SessionTok) : SSort -> Type` and the base `atom` constructor.
+  Done when: `Term` can wrap `SymExpr` atoms and serve as the base for the syntax layer.
+
+- [ ] Implement `SymbolicLean/Term/Literals.lean`.
+  Why: numerals and scalar literals should not bloat the core term file.
+  Do: add literal constructors and default-domain helpers used by `term!`.
+  Done when: numerals in `term!` can elaborate without special cases elsewhere.
+
+- [ ] Implement `SymbolicLean/Term/Arithmetic.lean`.
+  Why: arithmetic is the main “blackboard math” surface.
+  Do: define `CanAdd`, `CanMul`, `CanPow`, and the standard operator instances on `Term`.
+  Done when: users can write typed symbolic arithmetic without touching the backend.
+
+- [ ] Implement `SymbolicLean/Term/Logic.lean`.
+  Why: boolean formulas are a major SymPy use case and should be available in the pure layer.
+  Do: define typed boolean connectives and any needed helper classes.
+  Done when: boolean expressions can be built and typechecked as `Term`s.
+
+- [ ] Implement `SymbolicLean/Term/Relations.lean`.
+  Why: equality, order, and membership should be typed constructors, not ad hoc macros.
+  Do: define `CanCompare` and the core relation constructors.
+  Done when: relations and membership are expressible as `Term`s with typed argument sorts.
+
+- [ ] Implement `SymbolicLean/Term/Calculus.lean`.
+  Why: ODE/PDE and calculus workflows need derivative and common unevaluated forms at the term level.
+  Do: add derivative plus the common unevaluated forms that v1 actually uses.
+  Done when: `term!` can express the planned calculus examples without calling the backend directly.
+
+- [ ] Implement `SymbolicLean/Term/Application.lean`.
+  Why: symbolic function application is central to solver workflows.
+  Do: support unary function application directly and provide explicit helpers for higher arities.
+  Done when: `f x` style syntax works for unary symbolic functions and higher-arity application has a typed fallback.
+
+- [ ] Keep `Term` small on purpose.
+  Why: the project should not slide back into “model all of SymPy in Lean”.
+  Do: keep transforms and queries out of the term language.
+  Done when: `Term` remains an expression language rather than a catch-all API surface.
+
+## Phase 6: Backend Worker And Transport
+
+- [ ] Implement `tools/sympy_worker.py`.
+  Why: Lean needs a stable, inspectable backend process for sessions and symbolic operations.
+  Do: support `ping`, `mk_symbol`, `mk_function`, `eval_term`, `apply_op`, `pretty`, and `release`.
+  Done when: a Lean client can create refs, evaluate terms, apply named operations, and shut down cleanly.
+
+- [ ] Implement `SymbolicLean/Backend/Protocol.lean`.
+  Why: the wire protocol should be explicit and versioned on the Lean side.
+  Do: define request and response payload types matching the worker commands.
+  Done when: backend messages are encoded through typed protocol structures rather than raw JSON fragments everywhere.
+
+- [ ] Implement `SymbolicLean/Backend/Encode.lean`.
+  Why: `Term` needs a single deterministic serialization path to the backend.
+  Do: encode `Term` and generic op payloads.
+  Done when: every supported term constructor has a backend encoding.
+
+- [ ] Implement `SymbolicLean/Backend/Decode.lean`.
+  Why: solver-like and other structured APIs return more than a single opaque handle.
+  Do: decode tagged payloads for structured results and lightweight dynamic metadata.
+  Done when: the backend client can reconstruct typed result containers instead of leaking JSON upward.
+
+- [ ] Implement `SymbolicLean/Backend/Client.lean`.
+  Why: worker lifecycle, request dispatch, and ref bookkeeping should be isolated from the symbolic APIs.
+  Do: manage the persistent worker process, JSON request/response flow, and session ref tracking.
+  Done when: higher layers call backend helpers instead of shelling out or manually assembling protocol messages.
+
+- [ ] Implement `eval : Term s σ -> SymPyM s (SymExpr s σ)`.
+  Why: this is the core bridge from pure symbolic syntax to live SymPy objects.
+  Do: serialize the term, send it to `eval_term`, and allocate a typed handle for the returned ref.
+  Done when: a typed `Term` can be evaluated into a live `SymExpr` with no manual plumbing.
+
+## Phase 7: Effectful Symbolic Operations
+
+- [ ] Implement `SymbolicLean/Ops/Algebra.lean`.
+  Why: algebraic transforms are the most common first interaction with a CAS.
+  Do: add `simplify`, `factor`, `expand`, `cancel`, and `subs`.
+  Done when: common scalar-algebra examples can run entirely through the Lean API.
+
+- [ ] Implement `SymbolicLean/Ops/Calculus.lean`.
+  Why: symbolic calculus is a major SymPy strength and is needed for solver workflows.
+  Do: add `diffExpr`, `integrate`, `limit`, and minimal series support.
+  Done when: the planned calculus and ODE examples can be expressed without missing backend operations.
+
+- [ ] Implement `SymbolicLean/Ops/LinearAlgebra.lean`.
+  Why: typed matrix operations are one of the clearest benefits of the design.
+  Do: add `det`, `inv`, and `rref`.
+  Done when: matrix examples work and field-only operations respect domain constraints.
+
+- [ ] Implement `SymbolicLean/Ops/Solvers.lean`.
+  Why: solver APIs justify the whole Lean-to-SymPy bridge.
+  Do: add `solveUnivariate`, `solveset`, `dsolve`, `satisfiable`, and `ask`.
+  Done when: the v1 solver examples compile and run through typed result containers.
+
+- [ ] Define structured result types in the smallest sensible files.
+  Why: solver and query results should not leak raw JSON or untyped lists.
+  Do: define `FiniteSolve`, `EvalOr`, `ODESolution`, and `SolveSetResult`.
+  Done when: each nontrivial operation returns a typed Lean container with a clear public surface.
+
+- [ ] Implement the small `IntoSymExpr` front-door layer in `Ops/Core.lean`.
+  Why: a few high-frequency APIs should accept either `Term` or `SymExpr` without collapsing the architecture.
+  Do: add only the `Term` and `SymExpr` instances and use them only on the selected front doors.
+  Done when: users can write `factor term![...]` or `dsolve term![...] f`, but low-level APIs remain clearly `SymExpr`-based.
+
+## Phase 8: Syntax And Sugar
+
+- [ ] Implement `SymbolicLean/Syntax/Term.lean`.
+  Why: `term![...]` is the main ergonomic gateway into the pure symbolic layer.
+  Do: elaborate identifiers, numerals, unary minus, `+ - * / ^`, unary application, relations, boolean connectives, membership, and derivative syntax into `Term`.
+  Done when: the planned examples can be written with `term!` instead of raw constructors.
+
+- [ ] Implement `SymbolicLean/Syntax/Binders.lean`.
+  Why: repeated symbol creation is pure boilerplate and obscures the actual mathematics.
+  Do: add `symbols x y z`, `functions f g`, and optional assumption-bearing forms such as `symbols (x : positive) (y : real) z`.
+  Done when: session examples can declare symbols and functions concisely.
+
+- [ ] Implement `SymbolicLean/Syntax/Subst.lean`.
+  Why: substitution is frequent enough to deserve direct notation.
+  Do: add `expr[x ↦ 2, y ↦ 3]` and lower it to the ordinary typed substitution API.
+  Done when: substitution sugar exists without introducing a second semantic path.
+
+- [ ] Implement `SymbolicLean/Syntax/Command.lean` for `sympy d do ...`.
+  Why: users need one obvious way to open a session, install a default scalar domain, and use the sugar together.
+  Do: wrap `withSession`, install the default domain, and bring constructors and binder macros into scope.
+  Done when: the common examples can be written inside a compact `sympy ... do` block.
+
+- [ ] Implement `SymbolicLean/Syntax/Command.lean` for `#sympy d ...`.
+  Why: the project needs a quick exploratory interface during development and debugging.
+  Do: keep v1 scope intentionally narrow: scalar exploration only, auto-created scalar symbols, pretty-printed output.
+  Done when: a user can try scalar expressions interactively without writing a full session block.
+
+- [ ] Keep richer calculus notation out of v1 unless the earlier sugar lands cleanly.
+  Why: extra parser surface is lower value than stabilizing the core sugar.
+  Do: treat `∂` and `∫` as optional follow-up work, not a dependency.
+  Done when: they are absent from v1 unless clearly justified and still implemented in small files.
+
+## Phase 9: Generated Wrapper Layer
+
+- [ ] Implement `SymbolicLean/Syntax/DeclareOp.lean`.
+  Why: the wrapper count will grow too quickly if every operation is written by hand.
+  Do: implement `declare_sympy_op`.
+  Done when: the generator can define a typed wrapper, encoding hook, decode hook, and docstring from one declaration.
+
+- [ ] Restrict generated `Term` helpers to expression-forming operations.
+  Why: query and transform operations belong on live backend objects, not in the pure expression layer.
+  Do: generate `Term` helpers only where the operation truly constructs symbolic syntax.
+  Done when: the generator respects the `Term` / `SymExpr` split.
+
+- [ ] Prove the generator on one op from each family.
+  Why: the mechanism is only useful if it handles varied operation shapes.
+  Do: migrate one algebra op, one linear-algebra op, and one solver op.
+  Done when: those wrappers are generated rather than hand-written.
+
+## Phase 10: Examples, Negative Cases, And Verification
+
+- [ ] Implement `SymbolicLean/Examples/Scalars.lean`.
+  Why: scalar algebra is the first thing users will test.
+  Do: include factorization, simplification, and substitution examples.
+  Done when: scalar symbolic flows are demonstrated end-to-end.
+
+- [ ] Implement `SymbolicLean/Examples/Matrices.lean`.
+  Why: matrix typing is one of the clearest demonstrations of the project’s value.
+  Do: include matrix-vector multiplication and determinant examples.
+  Done when: dimension-checked matrix workflows compile and run.
+
+- [ ] Implement `SymbolicLean/Examples/Solvers.lean`.
+  Why: solver workflows are the major payoff for the Lean/SymPy bridge.
+  Do: include `dsolve`, `solveset`, `satisfiable`, and `ask`.
+  Done when: the planned solver stories exist as readable examples.
+
+- [ ] Implement `SymbolicLean/Examples/Negative.lean`.
+  Why: the project claims compile-time rejection of illegal operations and should demonstrate it.
+  Do: add `#guard_msgs`-style cases for dimension mismatch, non-field inversion, and differentiation with respect to a non-symbol.
+  Done when: the examples suite includes both positive and negative cases.
+
+- [ ] Re-export examples from `SymbolicLean/Examples.lean`.
+  Why: example discovery should be as easy as importing one module.
+  Do: keep the file tiny and purely organizational.
+  Done when: `SymbolicLean.Examples` exposes the example set cleanly.
+
+- [ ] Add mirrored docs for every new core module.
+  Why: the repo harness treats mirrored docs as part of the implementation, not optional polish.
+  Do: add `docs/<source>.md` files with the required sections in the same change set as each source file.
+  Done when: there are no missing mirrored docs for the new module tree.
+
+- [ ] Verify incrementally with Lean LSP first.
+  Why: file-local feedback is faster and keeps errors localized.
+  Do: use file diagnostics before reaching for whole-project builds.
+  Done when: each file is locally clean before integration.
+
+- [ ] Run the full verification gate.
+  Why: the task is not complete until code, docs, and harness all pass together.
+  Do: run `source .agents/lean4-env.sh`, `lake build`, and `python3 scripts/check_doc_harness.py --mode local --scope core`, then do a manual `#sympy` smoke pass.
+  Done when: build, docs harness, and interactive smoke checks all succeed.
+
+## Final Completion Criteria
+
+- [ ] `plan.md` explains the project motivation, trust model, core data structures, and design decisions clearly enough for a new contributor.
+- [ ] `todo.md` provides a step-by-step execution plan with purpose and completion criteria for each major task.
+- [ ] The module tree follows the small-file, self-documenting structure described in the plan.
+- [ ] The `Term` / `SymExpr` split is visible in code and preserved by the public API.
+- [ ] Core scalar, matrix, boolean, and solver workflows are implemented and demonstrated.
+- [ ] Mirrored docs exist for the new core modules and the harness checker passes.
+- [ ] A future agent can continue implementation by reading the local module, its mirrored doc, `plan.md`, and this checklist, without needing hidden context from old conversations.
