@@ -1,5 +1,10 @@
 import SymbolicLean.Decl.Assumptions
 import SymbolicLean.Decl.Core
+import SymbolicLean.Backend.Client
+import SymbolicLean.Backend.Decode
+import SymbolicLean.Backend.Encode
+import SymbolicLean.Backend.Protocol
+import SymbolicLean.Backend.Realize
 import SymbolicLean.Domain.Dim
 import SymbolicLean.Domain.VarCtx
 import SymbolicLean.Domain.Desc

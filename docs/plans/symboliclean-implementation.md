@@ -2,8 +2,8 @@
 
 ## Summary
 - This plan tracks the first implementation slice of the corrected architecture.
-- The current target stops at the pure declaration, domain, sort, session, and `Term` layers.
-- Backend transport, effectful SymPy operations, syntax DSLs, and examples remain follow-up work.
+- The current target now includes the first backend transport slice: worker protocol types, term encoding/decoding, the Python worker entrypoint, a persistent Lean-side client, and declaration realization helpers.
+- Backend encoding, realization, client integration, effectful SymPy operations, syntax DSLs, and examples remain follow-up work.
 
 ## Source Of Truth
 - High-level architecture: [`../../plan.md`](../../plan.md)

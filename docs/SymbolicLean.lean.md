@@ -5,7 +5,7 @@
 
 ## Responsibilities
 - Define the root library module for `SymbolicLean`.
-- Aggregate the public foundation modules for declarations, domains, sorts, sessions, runtime handles, and pure terms.
+- Aggregate the public foundation modules for declarations, backend transport, domains, sorts, sessions, runtime handles, and pure terms.
 
 ## Public Surface
 - Re-exports from the current `SymbolicLean/**` foundation modules.
@@ -17,6 +17,11 @@
 
 ## Related Files
 - [`SymbolicLean/Decl/Core.lean.md`](SymbolicLean/Decl/Core.lean.md)
+- [`SymbolicLean/Backend/Client.lean.md`](SymbolicLean/Backend/Client.lean.md)
+- [`SymbolicLean/Backend/Decode.lean.md`](SymbolicLean/Backend/Decode.lean.md)
+- [`SymbolicLean/Backend/Encode.lean.md`](SymbolicLean/Backend/Encode.lean.md)
+- [`SymbolicLean/Backend/Protocol.lean.md`](SymbolicLean/Backend/Protocol.lean.md)
+- [`SymbolicLean/Backend/Realize.lean.md`](SymbolicLean/Backend/Realize.lean.md)
 - [`SymbolicLean/Domain/Desc.lean.md`](SymbolicLean/Domain/Desc.lean.md)
 - [`SymbolicLean/Sort/Base.lean.md`](SymbolicLean/Sort/Base.lean.md)
 - [`SymbolicLean/Session/Monad.lean.md`](SymbolicLean/Session/Monad.lean.md)

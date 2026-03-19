@@ -5,16 +5,21 @@
 
 ## Responsibilities
 - Define the Lean-side typeclass bridge for symbolic domains.
-- Provide the initial `UnifyDomain` skeleton used by arithmetic APIs.
+- Interpret common symbolic domains through mathlib carrier types and algebraic capabilities.
+- Provide the `UnifyDomain` rules used by mixed-domain scalar arithmetic.
 
 ## Public Surface
 - `DomainCarrier`
+- `CarrierOf`
 - `InterpretsDomain`
+- `InterpretsCommRing`
+- `InterpretsIntegralDomain`
+- `InterpretsField`
 - `UnifyDomain`
 
 ## Change Triggers
 - Mathlib integration changes.
-- Carrier interpretation requirements grow beyond the current scaffold.
+- Carrier interpretation requirements grow beyond the current placeholder scaffold for `algExt` and `quotient`.
 - Mixed-domain arithmetic rules are added.
 
 ## Related Files

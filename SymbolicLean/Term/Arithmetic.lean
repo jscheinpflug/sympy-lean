@@ -1,4 +1,4 @@
-import SymbolicLean.Term.Core
+import SymbolicLean.Term.Literals
 
 namespace SymbolicLean
 
@@ -23,13 +23,13 @@ class CanPow (base exp : SSort) (out : outParam SSort) where
 instance : CanNeg (.scalar d) where
   neg := Term.scalarNeg
 
-instance : CanAdd (.scalar d) (.scalar d) (.scalar d) where
+instance [UnifyDomain d1 d2 out] : CanAdd (.scalar d1) (.scalar d2) (.scalar out) where
   add := Term.scalarAdd
 
-instance : CanSub (.scalar d) (.scalar d) (.scalar d) where
+instance [UnifyDomain d1 d2 out] : CanSub (.scalar d1) (.scalar d2) (.scalar out) where
   sub := Term.scalarSub
 
-instance : CanMul (.scalar d) (.scalar d) (.scalar d) where
+instance [UnifyDomain d1 d2 out] : CanMul (.scalar d1) (.scalar d2) (.scalar out) where
   mul := Term.scalarMul
 
 instance : CanDiv (.scalar d) (.scalar d) (.scalar d) where
@@ -64,5 +64,9 @@ instance [CanDiv σ τ υ] : HDiv (Term σ) (Term τ) (Term υ) where
 
 instance [CanPow σ τ υ] : HPow (Term σ) (Term τ) (Term υ) where
   hPow := CanPow.pow
+
+example : Term (.scalar (.ground .QQ)) := zz 1 + qq (0 : Rat)
+example : Term (.scalar (.ground .QQ)) := zz 2 - qq (0 : Rat)
+example : Term (.scalar (.ground .QQ)) := zz 3 * qq (0 : Rat)
 
 end SymbolicLean

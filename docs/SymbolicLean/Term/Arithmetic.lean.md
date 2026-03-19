@@ -6,6 +6,7 @@
 ## Responsibilities
 - Define arithmetic capability classes for pure terms.
 - Provide operator instances for scalar and matrix arithmetic that stays in the pure layer.
+- Route scalar mixed-domain `+`, `-`, and `*` through `UnifyDomain`.
 
 ## Public Surface
 - `CanNeg`
@@ -18,7 +19,7 @@
 ## Change Triggers
 - Pure arithmetic coverage changes.
 - Matrix arithmetic typing changes.
-- Mixed-domain arithmetic starts using `UnifyDomain`.
+- `UnifyDomain` output rules or scalar coercion behavior changes.
 
 ## Related Files
 - [`Core.lean.md`](Core.lean.md)

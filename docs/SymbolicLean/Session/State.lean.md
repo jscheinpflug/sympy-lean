@@ -5,9 +5,11 @@
 
 ## Responsibilities
 - Define session configuration, environment, and mutable runtime state.
-- Reserve storage for live refs, declaration interning, caches, and dynamic shape metadata.
+- Reserve storage for the worker handle, live refs, declaration interning, caches, and dynamic shape metadata.
 
 ## Public Surface
+- `WorkerChild`
+- `WorkerProcess`
 - `SessionConfig`
 - `SessionEnv`
 - `SessionState`
@@ -20,4 +22,5 @@
 ## Related Files
 - [`Errors.lean.md`](Errors.lean.md)
 - [`Monad.lean.md`](Monad.lean.md)
+- [`../Backend/Client.lean.md`](../Backend/Client.lean.md)
 - [`../Decl/Core.lean.md`](../Decl/Core.lean.md)

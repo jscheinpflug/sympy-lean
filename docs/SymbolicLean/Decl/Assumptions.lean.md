@@ -6,6 +6,7 @@
 ## Responsibilities
 - Define the pure assumption vocabulary attached to symbolic declarations.
 - Provide typed assumption facts that are stable before any backend session exists.
+- Keep declaration assumptions serializable across the backend protocol boundary.
 
 ## Public Surface
 - `Assumption`

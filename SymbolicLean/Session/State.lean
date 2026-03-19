@@ -5,6 +5,16 @@ import SymbolicLean.SymExpr.Core
 
 namespace SymbolicLean
 
+abbrev WorkerChild :=
+  IO.Process.Child
+    { stdin := IO.Process.Stdio.null
+      stdout := IO.Process.Stdio.piped
+      stderr := IO.Process.Stdio.piped }
+
+structure WorkerProcess where
+  stdin : IO.FS.Handle
+  child : WorkerChild
+
 structure SessionConfig where
   workerPath : Option System.FilePath := none
   prettyUnicode : Bool := true
@@ -15,7 +25,9 @@ structure SessionEnv where
   deriving Repr, Inhabited
 
 structure SessionState where
+  nextRequestId : Nat := 0
   nextRef : Nat := 0
+  worker : Option WorkerProcess := none
   liveRefs : Std.HashMap Ref SSort := {}
   declIntern : Std.HashMap DeclKey Ref := {}
   canonicalRefs : Std.HashMap UInt64 Ref := {}

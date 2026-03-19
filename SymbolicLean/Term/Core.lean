@@ -1,4 +1,5 @@
 import SymbolicLean.Decl.Core
+import SymbolicLean.Domain.Classes
 
 namespace SymbolicLean
 
@@ -18,9 +19,12 @@ inductive Term : SSort → Type where
   | intLit : Int → Term (.scalar (.ground .ZZ))
   | ratLit : Rat → Term (.scalar (.ground .QQ))
   | scalarNeg : Term (.scalar d) → Term (.scalar d)
-  | scalarAdd : Term (.scalar d) → Term (.scalar d) → Term (.scalar d)
-  | scalarSub : Term (.scalar d) → Term (.scalar d) → Term (.scalar d)
-  | scalarMul : Term (.scalar d) → Term (.scalar d) → Term (.scalar d)
+  | scalarAdd [UnifyDomain d1 d2 out] :
+      Term (.scalar d1) → Term (.scalar d2) → Term (.scalar out)
+  | scalarSub [UnifyDomain d1 d2 out] :
+      Term (.scalar d1) → Term (.scalar d2) → Term (.scalar out)
+  | scalarMul [UnifyDomain d1 d2 out] :
+      Term (.scalar d1) → Term (.scalar d2) → Term (.scalar out)
   | scalarDiv : Term (.scalar d) → Term (.scalar d) → Term (.scalar d)
   | scalarPow :
       Term (.scalar d) → Term (.scalar (.ground .ZZ)) → Term (.scalar d)

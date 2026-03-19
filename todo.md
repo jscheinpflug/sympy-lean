@@ -135,24 +135,24 @@ This file is the implementation checklist. Each item explains why it exists, wha
   Do: define `SymPyM := ReaderT SessionEnv (StateT SessionState (ExceptT SymPyError IO))` and `withSession`.
   Done when: backend APIs can run inside a session and produce typed results or typed errors.
 
-- [ ] Preserve handle non-escape by construction.
+- [x] Preserve handle non-escape by construction.
   Why: session safety is one of the key type-level guarantees of the entire project.
   Do: keep public handle-returning APIs under `∀ s` and do not leak raw refs.
   Done when: a `SymExpr s σ` cannot be stored or returned outside the session scope.
 
 ## Phase 4: Algebraic Bridge
 
-- [ ] Add `InterpretsDomain` instances for the ground domains.
+- [x] Add `InterpretsDomain` instances for the ground domains.
   Why: users need field/ring-sensitive operations to typecheck immediately on the common domains.
   Do: cover `ZZ`, `QQ`, `RR`, `CC`, `gaussianZZ`, and `GF p`.
   Done when: field-only and ring-only APIs can be stated over those domains.
 
-- [ ] Add recursive propagation instances for composite domains.
+- [x] Add recursive propagation instances for composite domains.
   Why: the recursive domain language is useless unless capabilities propagate through it.
   Do: define the expected behavior for `polyRing`, `fracField`, `algExt`, and `quotient`.
   Done when: the typeclass layer can infer the right algebraic capability on those constructions.
 
-- [ ] Implement and test `UnifyDomain`.
+- [x] Implement and test `UnifyDomain`.
   Why: mixed-domain symbolic arithmetic is common and must not rely on ad hoc operator overlap.
   Do: add reflexive and mixed-domain instances such as `ZZ + QQ -> QQ`.
   Done when: scalar arithmetic uses a single domain-unification path for both same-domain and mixed-domain cases.
@@ -201,37 +201,37 @@ This file is the implementation checklist. Each item explains why it exists, wha
 
 ## Phase 6: Declaration Realization And Backend Transport
 
-- [ ] Implement `tools/sympy_worker.py`.
+- [x] Implement `tools/sympy_worker.py`.
   Why: Lean needs a stable, inspectable backend process for sessions and symbolic operations.
   Do: support `ping`, `mk_symbol`, `mk_function`, `eval_term`, `apply_op`, `pretty`, and `release`.
   Done when: a Lean client can create refs, evaluate terms, apply named operations, and shut down cleanly.
 
-- [ ] Implement `SymbolicLean/Backend/Protocol.lean`.
+- [x] Implement `SymbolicLean/Backend/Protocol.lean`.
   Why: the wire protocol should be explicit and versioned on the Lean side.
   Do: define request and response payload types matching the worker commands.
   Done when: backend messages are encoded through typed protocol structures rather than raw JSON fragments everywhere.
 
-- [ ] Implement `SymbolicLean/Backend/Encode.lean`.
+- [x] Implement `SymbolicLean/Backend/Encode.lean`.
   Why: pure terms need a single deterministic serialization path to the backend.
   Do: encode `Term` and generic op payloads.
   Done when: every supported term constructor has a backend encoding.
 
-- [ ] Implement `SymbolicLean/Backend/Decode.lean`.
+- [x] Implement `SymbolicLean/Backend/Decode.lean`.
   Why: solver-like and other structured APIs return more than a single opaque handle.
   Do: decode tagged payloads for structured results and lightweight dynamic metadata.
   Done when: the backend client can reconstruct typed result containers instead of leaking JSON upward.
 
-- [ ] Implement `SymbolicLean/Backend/Realize.lean`.
+- [x] Implement `SymbolicLean/Backend/Realize.lean`.
   Why: realization is now its own subsystem, not just a side effect of term encoding.
   Do: intern declarations by full declaration key, create backend symbols/functions when missing, and expose helpers like `realizeDecl`, `realizeFun`, and `eval`.
   Done when: the same pure declaration maps to the same backend ref throughout one session.
 
-- [ ] Implement `SymbolicLean/Backend/Client.lean`.
+- [x] Implement `SymbolicLean/Backend/Client.lean`.
   Why: worker lifecycle, request dispatch, and ref bookkeeping should be isolated from symbolic APIs.
   Do: manage the persistent worker process, JSON request/response flow, and session ref tracking.
   Done when: higher layers call backend helpers instead of shelling out or manually assembling protocol messages.
 
-- [ ] Implement `eval : Term σ -> SymPyM s (SymExpr s σ)`.
+- [x] Implement `eval : Term σ -> SymPyM s (SymExpr s σ)`.
   Why: this is the core bridge from pure symbolic syntax to live SymPy objects.
   Do: recursively realize declarations, serialize the term, send it to `eval_term`, and allocate a typed handle for the returned ref.
   Done when: a pure typed term can be evaluated into a live `SymExpr` with no manual plumbing.

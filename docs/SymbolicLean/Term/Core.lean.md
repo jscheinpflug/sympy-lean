@@ -6,6 +6,7 @@
 ## Responsibilities
 - Define pure symbolic atoms, heterogeneous argument lists, and the typed `Term` AST.
 - Keep the pure expression layer separate from runtime handles and backend effects.
+- Keep scalar mixed-domain constructors gated by `UnifyDomain`.
 
 ## Public Surface
 - `Atom`
@@ -19,7 +20,7 @@
 ## Change Triggers
 - Pure term constructors change.
 - Declaration-to-term boundaries change.
-- New pure expression forms are added.
+- New pure expression forms or scalar domain-unification rules are added.
 
 ## Related Files
 - [`Literals.lean.md`](Literals.lean.md)
