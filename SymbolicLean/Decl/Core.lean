@@ -6,9 +6,11 @@ namespace SymbolicLean
 structure SymDecl (σ : SSort) where
   name : Lean.Name
   assumptions : List AssumptionFact := []
+  deriving Repr, BEq, Hashable
 
 structure FunDecl (args : List SSort) (ret : SSort) where
   name : Lean.Name
+  deriving Repr, BEq, Hashable
 
 inductive DeclKind where
   | sym
@@ -21,6 +23,18 @@ structure DeclKey where
   sort : SSort
   assumptions : List AssumptionFact := []
   deriving Repr, BEq, Hashable
+
+noncomputable instance : DecidableEq (SymDecl σ) := by
+  classical
+  infer_instance
+
+noncomputable instance : DecidableEq (FunDecl args ret) := by
+  classical
+  infer_instance
+
+noncomputable instance : DecidableEq DeclKey := by
+  classical
+  infer_instance
 
 namespace SymDecl
 

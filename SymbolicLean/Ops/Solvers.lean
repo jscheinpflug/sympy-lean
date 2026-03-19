@@ -3,6 +3,7 @@ import SymbolicLean.Backend.Client
 import SymbolicLean.Backend.Decode
 import SymbolicLean.Decl.Assumptions
 import SymbolicLean.Ops.Results
+import SymbolicLean.Syntax.DeclareOp
 import SymbolicLean.SymExpr.Refined
 
 namespace SymbolicLean
@@ -85,9 +86,11 @@ def solvesetExpr (expr : SymExpr s (.scalar d)) (x : SymSymbol s (.scalar d)) :
   let ref ← applyOpRemoteRef (.set (.scalar d)) "solveset" expr.ref [encodeRefArg x.expr.ref.ident]
   pure { setExpr := { ref := ref } }
 
+declare_sympy_op dsolveEquation for (ode : SymExpr s .boolean) returns .boolean => "dsolve"
+  doc "Solve a realized ODE and return the resulting equation handle."
+
 def dsolveExpr (ode : SymExpr s .boolean) : SymPyM s (ODESolution s) := do
-  let ref ← applyOpRemoteRef .boolean "dsolve" ode.ref
-  pure { equation := { ref := ref } }
+  pure { equation := ← dsolveEquation ode }
 
 def satisfiableExpr (formula : SymExpr s .boolean) : SymPyM s SatisfiableResult := do
   let payload ← liftExcept <| decodeJsonInfo (← applyOpRemote "satisfiable" formula.ref)

@@ -4,12 +4,12 @@ This file is the implementation checklist. Each item explains why it exists, wha
 
 ## Phase 0: Planning And Standards
 
-- [ ] Ensure `plan.md` reflects the corrected architecture.
+- [x] Ensure `plan.md` reflects the corrected architecture.
   Why: the project plan is the decision record for future implementers.
   Do: keep the plan aligned with the pure declaration layer, pure `Term`, runtime `SymExpr`, declaration interning, and the updated syntax rules.
   Done when: `plan.md` no longer treats `Term` as session-scoped and no longer treats assumptions as session-owned source-of-truth data.
 
-- [ ] Keep `todo.md` execution-oriented.
+- [x] Keep `todo.md` execution-oriented.
   Why: agents need an operational document, not just architecture notes.
   Do: keep tasks checkable, local, and explicit about purpose and completion criteria.
   Done when: a no-context implementer can follow the file top to bottom without inventing missing steps.
@@ -103,7 +103,7 @@ This file is the implementation checklist. Each item explains why it exists, wha
   Do: keep `tuple`, `fn`, and `relation` list-based, even if runtime payloads use arrays elsewhere.
   Done when: recursive sorts compile cleanly and no recursive `Array (SymSort ...)` remains.
 
-- [ ] Add manual `DecidableEq` / `BEq` / `Hashable` only where deriving fails.
+- [x] Add manual `DecidableEq` / `BEq` / `Hashable` only where deriving fails.
   Why: the design should not depend on fragile deriving success for recursive datatypes.
   Do: try deriving first; if Lean resists, write manual instances in the smallest local file.
   Done when: declarations, domains, and sorts have stable equality and hashing support.
@@ -312,44 +312,44 @@ This file is the implementation checklist. Each item explains why it exists, wha
 
 ## Phase 9: Generated Wrapper Layer
 
-- [ ] Implement `SymbolicLean/Syntax/DeclareOp.lean`.
+- [x] Implement `SymbolicLean/Syntax/DeclareOp.lean`.
   Why: the wrapper count will grow too quickly if every operation is written by hand.
   Do: implement `declare_sympy_op`.
   Done when: the generator can define a typed wrapper, encoding hook, decode hook, and docstring from one declaration.
 
-- [ ] Restrict generated pure helpers to expression-forming operations.
+- [x] Restrict generated pure helpers to expression-forming operations.
   Why: query and transform operations belong on realized backend objects, not in the pure expression layer.
   Do: generate pure helpers only where the operation truly constructs symbolic syntax.
   Done when: the generator respects the declaration / `Term` / `SymExpr` split.
 
-- [ ] Prove the generator on one op from each family.
+- [x] Prove the generator on one op from each family.
   Why: the mechanism is only useful if it handles varied operation shapes.
   Do: migrate one algebra op, one linear-algebra op, and one solver op.
   Done when: those wrappers are generated rather than hand-written.
 
 ## Phase 10: Examples, Negative Cases, And Verification
 
-- [ ] Implement `SymbolicLean/Examples/Scalars.lean`.
+- [x] Implement `SymbolicLean/Examples/Scalars.lean`.
   Why: scalar algebra is the first thing users will test.
   Do: include factorization, simplification, and substitution examples built from pure declarations and `term!`.
   Done when: scalar symbolic flows are demonstrated end-to-end.
 
-- [ ] Implement `SymbolicLean/Examples/Matrices.lean`.
+- [x] Implement `SymbolicLean/Examples/Matrices.lean`.
   Why: matrix typing is one of the clearest demonstrations of the project’s value.
   Do: include matrix-vector multiplication and determinant examples.
   Done when: dimension-checked matrix workflows compile and run.
 
-- [ ] Implement `SymbolicLean/Examples/Solvers.lean`.
+- [x] Implement `SymbolicLean/Examples/Solvers.lean`.
   Why: solver workflows are the major payoff for the Lean/SymPy bridge.
   Do: include `dsolve`, `solveset`, `satisfiable`, and `ask`.
   Done when: the planned solver stories exist as readable examples and use the corrected pure-declaration surface.
 
-- [ ] Implement `SymbolicLean/Examples/Negative.lean`.
+- [x] Implement `SymbolicLean/Examples/Negative.lean`.
   Why: the project claims compile-time rejection of illegal operations and should demonstrate it.
   Do: add `#guard_msgs`-style cases for dimension mismatch, non-field inversion, and differentiation with respect to a non-symbol.
   Done when: the examples suite includes both positive and negative cases.
 
-- [ ] Re-export examples from `SymbolicLean/Examples.lean`.
+- [x] Re-export examples from `SymbolicLean/Examples.lean`.
   Why: example discovery should be as easy as importing one module.
   Do: keep the file tiny and purely organizational.
   Done when: `SymbolicLean.Examples` exposes the example set cleanly.
@@ -359,23 +359,23 @@ This file is the implementation checklist. Each item explains why it exists, wha
   Do: add `docs/<source>.md` files with the required sections in the same change set as each source file.
   Done when: there are no missing mirrored docs for the new module tree.
 
-- [ ] Verify incrementally with Lean LSP first.
+- [x] Verify incrementally with Lean LSP first.
   Why: file-local feedback is faster and keeps errors localized.
   Do: use file diagnostics before reaching for whole-project builds.
   Done when: each file is locally clean before integration.
 
-- [ ] Run the full verification gate.
+- [x] Run the full verification gate.
   Why: the task is not complete until code, docs, and harness all pass together.
   Do: run `source /home/scheinpflug/symbolic-lean/.agents/lean4-env.sh`, `lake build`, and `python3 scripts/check_doc_harness.py --mode local --scope core`, then do a manual `#sympy` smoke pass.
   Done when: build, docs harness, and interactive smoke checks all succeed.
 
 ## Final Completion Criteria
 
-- [ ] `plan.md` explains the project motivation, trust model, declaration model, core data structures, and design decisions clearly enough for a new contributor.
-- [ ] `todo.md` provides a step-by-step execution plan with purpose and completion criteria for each major task.
-- [ ] The module tree follows the small-file, self-documenting structure described in the plan.
-- [ ] Pure declarations, pure `Term`, and session-scoped `SymExpr` are all visible in code and preserved by the public API.
-- [ ] Declarations are interned on realization and assumptions are attached on the pure side before realization.
-- [ ] Core scalar, matrix, boolean, and solver workflows are implemented and demonstrated.
-- [ ] Mirrored docs exist for the new core modules and the harness checker passes.
-- [ ] A future agent can continue implementation by reading the local module, its mirrored doc, `plan.md`, and this checklist, without needing hidden context from old conversations.
+- [x] `plan.md` explains the project motivation, trust model, declaration model, core data structures, and design decisions clearly enough for a new contributor.
+- [x] `todo.md` provides a step-by-step execution plan with purpose and completion criteria for each major task.
+- [x] The module tree follows the small-file, self-documenting structure described in the plan.
+- [x] Pure declarations, pure `Term`, and session-scoped `SymExpr` are all visible in code and preserved by the public API.
+- [x] Declarations are interned on realization and assumptions are attached on the pure side before realization.
+- [x] Core scalar, matrix, boolean, and solver workflows are implemented and demonstrated.
+- [x] Mirrored docs exist for the new core modules and the harness checker passes.
+- [x] A future agent can continue implementation by reading the local module, its mirrored doc, `plan.md`, and this checklist, without needing hidden context from old conversations.

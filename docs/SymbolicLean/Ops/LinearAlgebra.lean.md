@@ -5,6 +5,7 @@
 
 ## Responsibilities
 - Define the first effectful linear-algebra operations over realized matrix expressions.
+- Use the generated unary-wrapper layer for the direct ref-returning matrix ops.
 - Enforce the field-only matrix constraints for inversion and row reduction at the Lean type level.
 - Decode SymPy's structured `rref` result into a typed Lean container.
 

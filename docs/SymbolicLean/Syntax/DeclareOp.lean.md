@@ -5,13 +5,18 @@
 
 ## Responsibilities
 - Define the first `declare_sympy_op` generator command.
-- Generate narrow unary sort-preserving realized wrappers from a compact declaration.
+- Generate unary realized wrappers from compact declarations.
+- Generate the wrapper body, a small encode hook, a small decode hook, and an attached docstring from one declaration.
+- Keep the scope intentionally narrow to unary realized wrappers, with one sort-preserving form and one explicit-output form.
 
 ## Public Surface
 - `declare_sympy_op name => "opName"`
+- `declare_sympy_op name => "opName" doc "..." `
+- `declare_sympy_op name {binders*} for (arg : SymExpr s inSort) returns outSort => "opName"`
+- `declare_sympy_op name {binders*} for (arg : SymExpr s inSort) returns outSort => "opName" doc "..."`
 
 ## Change Triggers
-- Generated wrapper shapes grow beyond unary sort-preserving operations.
+- Generated wrapper shapes grow beyond unary realized operations.
 - The project starts generating decode-heavy or pure-expression helpers from the same declaration surface.
 
 ## Related Files

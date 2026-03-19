@@ -19,6 +19,10 @@ inductive SymSort (ext : Type) where
   | ext : ext → SymSort ext
   deriving Repr, BEq, Hashable
 
+noncomputable instance [DecidableEq ext] : DecidableEq (SymSort ext) := by
+  classical
+  infer_instance
+
 abbrev SSort := SymSort SymExt
 
 end SymbolicLean

@@ -5,12 +5,14 @@
 
 ## Responsibilities
 - Define the first effectful solver and query operations over realized expressions.
+- Use the generated unary-wrapper layer for the raw ref-returning ODE solve step.
 - Decode finite-solution, set-valued, ODE, satisfiability, and assumption-query results into typed Lean containers.
 - Keep the low-level realized-object entry points separate from the later conversion layer in `Ops/Core`.
 
 ## Public Surface
 - `solveUnivariateExpr`
 - `solvesetExpr`
+- `dsolveEquation`
 - `dsolveExpr`
 - `satisfiableExpr`
 - `askSymbol`

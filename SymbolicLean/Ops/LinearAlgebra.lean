@@ -2,6 +2,7 @@ import Lean.Data.Json
 import SymbolicLean.Backend.Client
 import SymbolicLean.Backend.Decode
 import SymbolicLean.Domain.Classes
+import SymbolicLean.Syntax.DeclareOp
 import SymbolicLean.SymExpr.Core
 
 namespace SymbolicLean
@@ -43,15 +44,13 @@ private def decodeRRefPayload (payload : Json) : Except SymPyError (Ref × List 
 private def rememberRef (ref : Ref) (sort : SSort) : SymPyM s Unit :=
   modify fun st => { st with liveRefs := st.liveRefs.insert ref sort }
 
-def det [DomainCarrier d] [InterpretsCommRing d] (matrix : SymExpr s (.matrix d n n)) :
-    SymPyM s (SymExpr s (.scalar d)) := do
-  let ref ← applyOpRemoteRef (.scalar d) "det" matrix.ref
-  pure { ref := ref }
+declare_sympy_op det {d : DomainDesc} {n : Dim} [DomainCarrier d] [InterpretsCommRing d]
+  for (matrix : SymExpr s (.matrix d n n)) returns (.scalar d) => "det"
+  doc "Compute the determinant of a realized square matrix."
 
-def inv [DomainCarrier d] [InterpretsField d] (matrix : SymExpr s (.matrix d n n)) :
-    SymPyM s (SymExpr s (.matrix d n n)) := do
-  let ref ← applyOpRemoteRef (.matrix d n n) "inv" matrix.ref
-  pure { ref := ref }
+declare_sympy_op inv {d : DomainDesc} {n : Dim} [DomainCarrier d] [InterpretsField d]
+  for (matrix : SymExpr s (.matrix d n n)) returns (.matrix d n n) => "inv"
+  doc "Invert a realized square matrix over a field-like domain."
 
 def rref [DomainCarrier d] [InterpretsField d] (matrix : SymExpr s (.matrix d m n)) :
     SymPyM s (RRefResult s d m n) := do

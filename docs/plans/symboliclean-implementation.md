@@ -2,8 +2,8 @@
 
 ## Summary
 - This plan tracks the first implementation slice of the corrected architecture.
-- The current target now includes the first backend transport slice plus the first effectful algebra, calculus, linear-algebra, and solver ops over realized expressions, along with the initial pure-to-realized conversion layer, `term!`, the first binder-sugar layer for pure declarations, substitution sugar, the initial `sympy d do ...` session syntax, and the narrow `#sympy d => expr` exploratory command.
-- Backend encoding, realization, client integration, effectful SymPy operations, syntax DSLs, and examples remain follow-up work.
+- The current target now includes the first backend transport slice plus the first effectful algebra, calculus, linear-algebra, and solver ops over realized expressions, along with the initial pure-to-realized conversion layer, `term!`, the first binder-sugar layer for pure declarations, substitution sugar, the initial `sympy d do ...` session syntax, the narrow `#sympy d => expr` exploratory command, the first end-to-end example suite, and the first unary `declare_sympy_op` generator slice with generated wrapper bodies, local encode/decode hooks, and attached docstrings.
+- Broader generated wrappers, richer decode-aware wrapper generation, and larger syntax DSL follow-ups remain open work.
 
 ## Source Of Truth
 - High-level architecture: [`../../plan.md`](../../plan.md)
