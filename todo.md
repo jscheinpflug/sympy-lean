@@ -14,91 +14,91 @@ This file is the implementation checklist. Each item explains why it exists, wha
   Do: keep tasks checkable, local, and explicit about purpose and completion criteria.
   Done when: a no-context implementer can follow the file top to bottom without inventing missing steps.
 
-- [ ] Add explicit small-file guidance to `docs/standards/lean-engineering.md`.
+- [x] Add explicit small-file guidance to `docs/standards/lean-engineering.md`.
   Why: the plan depends on narrow, self-documenting files.
   Do: add guidance for 80-150 LOC target, split-before-200 LOC, one responsibility per file, and folders by concern.
   Done when: the standards doc clearly tells future agents not to create kitchen-sink modules.
 
-- [ ] Add one short note to `docs/architecture.md` about self-documenting structure.
+- [x] Add one short note to `docs/architecture.md` about self-documenting structure.
   Why: mirrored docs only work well if the source tree is already narrow and well named.
   Do: state that mirrored docs plus small responsibility-aligned files are the main localization mechanism.
   Done when: the architecture doc says this explicitly.
 
-- [ ] Add `docs/plans/symboliclean-implementation.md` and link it from `docs/plans/index.md`.
+- [x] Add `docs/plans/symboliclean-implementation.md` and link it from `docs/plans/index.md`.
   Why: the repo harness expects discoverable long-running plans under `/docs/plans`.
   Do: summarize the final architecture and point back to `plan.md` and `todo.md`.
   Done when: `docs/plans/index.md` links to the new implementation plan artifact.
 
 ## Phase 1: Bootstrap And Public Module Surface
 
-- [ ] Add `mathlib` to `lakefile.toml`.
+- [x] Add `mathlib` to `lakefile.toml`.
   Why: the symbolic domain layer needs real algebraic capabilities instead of a local hierarchy clone.
   Do: add the dependency and refresh manifests if required.
   Done when: `lake build` succeeds with `mathlib` installed.
 
-- [ ] Replace placeholder exports in `SymbolicLean.lean`.
+- [x] Replace placeholder exports in `SymbolicLean.lean`.
   Why: the root module should describe the real public surface as the implementation grows.
   Do: re-export the intended top-level declaration, domain, sort, symbolic-expression, session, term, ops, syntax, and examples modules.
   Done when: users can import `SymbolicLean` and reach the main public API from there.
 
-- [ ] Keep `Main.lean` as a minimal smoke/demo entrypoint.
+- [x] Keep `Main.lean` as a minimal smoke/demo entrypoint.
   Why: examples should live in `SymbolicLean/Examples`, not in the executable root.
   Do: keep `Main.lean` tiny and descriptive, or leave a minimal demo path only.
   Done when: `Main.lean` is not carrying library logic.
 
-- [ ] Create the final folder tree under `SymbolicLean/`.
+- [x] Create the final folder tree under `SymbolicLean/`.
   Why: the architecture depends on separating concerns cleanly so files remain small and local.
   Do: create `Decl`, `Domain`, `Sort`, `SymExpr`, `Session`, `Term`, `Backend`, `Ops`, `Syntax`, and `Examples`.
   Done when: the directory structure matches `plan.md` and no folder mixes unrelated concerns.
 
 ## Phase 2: Pure Declarations, Domains, And Sorts
 
-- [ ] Implement `SymbolicLean/Decl/Assumptions.lean`.
+- [x] Implement `SymbolicLean/Decl/Assumptions.lean`.
   Why: assumptions are part of pure symbolic identity and should not live only in session state.
   Do: define `Assumption`, `Polarity`, and `AssumptionFact`.
   Done when: declaration-time assumptions have a stable typed representation.
 
-- [ ] Implement `SymbolicLean/Decl/Core.lean`.
+- [x] Implement `SymbolicLean/Decl/Core.lean`.
   Why: pure symbolic identity must exist before any backend session exists.
   Do: define `SymDecl`, `FunDecl`, and a hashable declaration key type that includes everything relevant for backend realization.
   Done when: symbols and function symbols can be represented as pure data with stable identity.
 
-- [ ] Implement `SymbolicLean/Domain/Dim.lean`.
+- [x] Implement `SymbolicLean/Domain/Dim.lean`.
   Why: matrices and tensors need a first-class dimension type at the core of the design.
   Do: define `Dim := static Nat | dyn Name`.
   Done when: dimensions can be used in matrix and tensor sorts without placeholder types.
 
-- [ ] Implement `SymbolicLean/Domain/VarCtx.lean`.
+- [x] Implement `SymbolicLean/Domain/VarCtx.lean`.
   Why: polynomial and algebraic-extension domains need explicit variable contexts.
   Do: define `VarCtx`, store ordered variable names, and keep the `Nodup` invariant.
   Done when: polynomial-related domain constructors can refer to a stable variable context.
 
-- [ ] Implement `SymbolicLean/Domain/Desc.lean`.
+- [x] Implement `SymbolicLean/Domain/Desc.lean`.
   Why: the domain language determines which symbolic operations are legal and how results are interpreted.
   Do: define `GroundDom`, `PolyPresentation`, `AlgRelation`, `IdealRelation`, and recursive `DomainDesc`.
   Done when: the domain layer can express ground domains, polynomial rings, fraction fields, algebraic extensions, and quotients.
 
-- [ ] Implement `SymbolicLean/Domain/Classes.lean`.
+- [x] Implement `SymbolicLean/Domain/Classes.lean`.
   Why: domain descriptions need a bridge to Lean-side algebraic structure and mixed-domain arithmetic.
   Do: define `DomainCarrier`, `InterpretsDomain`, and `UnifyDomain`.
   Done when: APIs can state field-like requirements and mixed-domain arithmetic has a typed output domain.
 
-- [ ] Implement `SymbolicLean/Sort/Relations.lean`.
+- [x] Implement `SymbolicLean/Sort/Relations.lean`.
   Why: boolean truth values and relation kinds are shared across the sort layer and the term language.
   Do: define `Truth` and `RelKind`.
   Done when: the rest of the sort layer can depend on a stable relation vocabulary.
 
-- [ ] Implement `SymbolicLean/Sort/Ext.lean`.
+- [x] Implement `SymbolicLean/Sort/Ext.lean`.
   Why: the framework needs a typed story for specialized SymPy families without collapsing to raw strings.
   Do: define a concrete `SymExt` enum covering at least geometry, combinatorics, stats, physics, indexed tensors, codegen, number theory, and a fallback like `other Name`.
   Done when: extension-family values can appear in `SymSort`.
 
-- [ ] Implement `SymbolicLean/Sort/Base.lean`.
+- [x] Implement `SymbolicLean/Sort/Base.lean`.
   Why: every pure declaration, term, and backend handle is indexed by a symbolic object family.
   Do: define `SymSort ext` and export `abbrev SSort := SymSort SymExt`.
   Done when: the sort language can represent booleans, scalars, matrices, tensors, sets, tuples, sequences, maps, functions, relations, and extension families.
 
-- [ ] Use `List` in recursive sort positions.
+- [x] Use `List` in recursive sort positions.
   Why: recursive `Array` positions already caused elaboration and deriving problems in review.
   Do: keep `tuple`, `fn`, and `relation` list-based, even if runtime payloads use arrays elsewhere.
   Done when: recursive sorts compile cleanly and no recursive `Array (SymSort ...)` remains.
@@ -110,27 +110,27 @@ This file is the implementation checklist. Each item explains why it exists, wha
 
 ## Phase 3: Runtime Handles And Sessions
 
-- [ ] Implement `SymbolicLean/SymExpr/Core.lean`.
+- [x] Implement `SymbolicLean/SymExpr/Core.lean`.
   Why: the project needs a Lean-side name for live backend objects that does not conflict with `Lean.Expr`.
   Do: define `opaque SessionTok`, `Ref`, and `SymExpr (s : SessionTok) (σ : SSort)`.
   Done when: runtime symbolic values can be referenced abstractly and typed by sort.
 
-- [ ] Implement `SymbolicLean/SymExpr/Refined.lean`.
+- [x] Implement `SymbolicLean/SymExpr/Refined.lean`.
   Why: some APIs require realized symbols, function symbols, booleans, or relations specifically.
   Do: define `SymSymbol`, `SymFun`, `SymBool`, and `SymRel` as thin wrappers over `SymExpr`.
   Done when: symbol-only and relation-specific APIs can require these wrappers instead of ad hoc runtime checks.
 
-- [ ] Implement `SymbolicLean/Session/Errors.lean`.
+- [x] Implement `SymbolicLean/Session/Errors.lean`.
   Why: the backend boundary needs typed failures rather than stringly error handling.
   Do: define worker, decode, protocol, and user-surface errors.
   Done when: `SymPyM` can fail with structured error types.
 
-- [ ] Implement `SymbolicLean/Session/State.lean`.
+- [x] Implement `SymbolicLean/Session/State.lean`.
   Why: sessions own handle lifetimes, caches, and declaration realization.
   Do: store live handles, a declaration-interning table, canonicalization caches, and any dynamic shape/domain metadata needed for decoded results.
   Done when: session state no longer treats assumptions as the authoritative symbolic source of truth and instead interns pure declarations into backend refs.
 
-- [ ] Implement `SymbolicLean/Session/Monad.lean`.
+- [x] Implement `SymbolicLean/Session/Monad.lean`.
   Why: all backend communication is effectful and should live in one explicit monad.
   Do: define `SymPyM := ReaderT SessionEnv (StateT SessionState (ExceptT SymPyError IO))` and `withSession`.
   Done when: backend APIs can run inside a session and produce typed results or typed errors.
@@ -159,42 +159,42 @@ This file is the implementation checklist. Each item explains why it exists, wha
 
 ## Phase 5: Pure Term Language
 
-- [ ] Implement `SymbolicLean/Term/Core.lean`.
+- [x] Implement `SymbolicLean/Term/Core.lean`.
   Why: users need a pure typed symbolic language before any backend calls happen.
   Do: define `Atom : SSort -> Type`, `Term : SSort -> Type`, and the base `atom` constructor over pure declarations.
   Done when: `Term` is genuinely pure and no longer carries a session parameter.
 
-- [ ] Implement `SymbolicLean/Term/Literals.lean`.
+- [x] Implement `SymbolicLean/Term/Literals.lean`.
   Why: numerals and scalar literals should not bloat the core term file.
   Do: add literal constructors and default-domain helpers used by `term!`.
   Done when: numerals in `term!` can elaborate without special cases elsewhere.
 
-- [ ] Implement `SymbolicLean/Term/Arithmetic.lean`.
+- [x] Implement `SymbolicLean/Term/Arithmetic.lean`.
   Why: arithmetic is the main blackboard-math surface.
   Do: define `CanAdd`, `CanMul`, `CanPow`, and the standard operator instances on `Term`.
   Done when: users can write typed symbolic arithmetic without touching the backend.
 
-- [ ] Implement `SymbolicLean/Term/Logic.lean`.
+- [x] Implement `SymbolicLean/Term/Logic.lean`.
   Why: boolean formulas are a major SymPy use case and should be available in the pure layer.
   Do: define typed boolean connectives and any needed helper classes.
   Done when: boolean expressions can be built and typechecked as pure terms.
 
-- [ ] Implement `SymbolicLean/Term/Relations.lean`.
+- [x] Implement `SymbolicLean/Term/Relations.lean`.
   Why: equality, order, and membership should be typed constructors, not ad hoc macros.
   Do: define `CanCompare` and the core relation constructors.
   Done when: relations and membership are expressible as pure terms with typed argument sorts.
 
-- [ ] Implement `SymbolicLean/Term/Calculus.lean`.
+- [x] Implement `SymbolicLean/Term/Calculus.lean`.
   Why: ODE/PDE and calculus workflows need derivative and common unevaluated forms at the term level.
   Do: add derivative plus the common unevaluated forms that v1 actually uses.
   Done when: `term!` can express the planned calculus examples without calling the backend directly.
 
-- [ ] Implement `SymbolicLean/Term/Application.lean`.
+- [x] Implement `SymbolicLean/Term/Application.lean`.
   Why: symbolic function application is central to solver workflows.
   Do: support unary function application directly and provide explicit helpers for higher arities.
   Done when: `f x` style syntax works for unary pure function declarations and higher-arity application has a typed fallback.
 
-- [ ] Keep `Term` small on purpose.
+- [x] Keep `Term` small on purpose.
   Why: the project should not slide back into “model all of SymPy in Lean”.
   Do: keep transforms and queries out of the term language.
   Done when: `Term` remains an expression language rather than a catch-all API surface.
@@ -354,7 +354,7 @@ This file is the implementation checklist. Each item explains why it exists, wha
   Do: keep the file tiny and purely organizational.
   Done when: `SymbolicLean.Examples` exposes the example set cleanly.
 
-- [ ] Add mirrored docs for every new core module.
+- [x] Add mirrored docs for every new core module.
   Why: the repo harness treats mirrored docs as part of the implementation, not optional polish.
   Do: add `docs/<source>.md` files with the required sections in the same change set as each source file.
   Done when: there are no missing mirrored docs for the new module tree.
@@ -366,7 +366,7 @@ This file is the implementation checklist. Each item explains why it exists, wha
 
 - [ ] Run the full verification gate.
   Why: the task is not complete until code, docs, and harness all pass together.
-  Do: run `source .agents/lean4-env.sh`, `lake build`, and `python3 scripts/check_doc_harness.py --mode local --scope core`, then do a manual `#sympy` smoke pass.
+  Do: run `source /home/scheinpflug/symbolic-lean/.agents/lean4-env.sh`, `lake build`, and `python3 scripts/check_doc_harness.py --mode local --scope core`, then do a manual `#sympy` smoke pass.
   Done when: build, docs harness, and interactive smoke checks all succeed.
 
 ## Final Completion Criteria
@@ -379,4 +379,3 @@ This file is the implementation checklist. Each item explains why it exists, wha
 - [ ] Core scalar, matrix, boolean, and solver workflows are implemented and demonstrated.
 - [ ] Mirrored docs exist for the new core modules and the harness checker passes.
 - [ ] A future agent can continue implementation by reading the local module, its mirrored doc, `plan.md`, and this checklist, without needing hidden context from old conversations.
-

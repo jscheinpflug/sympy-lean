@@ -1,6 +1,11 @@
 name = "symbolic-lean"
 version = "0.1.0"
-defaultTargets = ["symbolic-lean"]
+defaultTargets = ["SymbolicLean", "symbolic-lean"]
+
+[[require]]
+name = "mathlib"
+scope = "leanprover-community"
+rev = "v4.28.0"
 
 [[lean_lib]]
 name = "SymbolicLean"

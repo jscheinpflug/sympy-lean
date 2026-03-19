@@ -16,3 +16,8 @@ source /home/scheinpflug/symbolic-lean/.agents/lean4-env.sh
 - `LEAN4_PLUGIN_ROOT=/home/scheinpflug/symbolic-lean/tools/lean4-skills/plugins/lean4`
 - `LEAN4_SCRIPTS=/home/scheinpflug/symbolic-lean/tools/lean4-skills/plugins/lean4/lib/scripts`
 - `LEAN4_REFS=/home/scheinpflug/symbolic-lean/tools/lean4-skills/plugins/lean4/skills/lean4/references`
+
+## Import Discipline
+- Prefer narrow `Mathlib/...` imports over `import Mathlib` when editing project files.
+- Treat `import Mathlib` as a last resort because it degrades Lean LSP restart-file performance in editors such as VSCode.
+- If a file only depends on local project modules, keep it free of mathlib imports.

@@ -1,3 +1,21 @@
--- This module serves as the root of the `SymbolicLean` library.
--- Import modules here that should be built as part of the library.
-import SymbolicLean.Basic
+import SymbolicLean.Decl.Assumptions
+import SymbolicLean.Decl.Core
+import SymbolicLean.Domain.Dim
+import SymbolicLean.Domain.VarCtx
+import SymbolicLean.Domain.Desc
+import SymbolicLean.Domain.Classes
+import SymbolicLean.Sort.Relations
+import SymbolicLean.Sort.Ext
+import SymbolicLean.Sort.Base
+import SymbolicLean.SymExpr.Core
+import SymbolicLean.SymExpr.Refined
+import SymbolicLean.Session.Errors
+import SymbolicLean.Session.State
+import SymbolicLean.Session.Monad
+import SymbolicLean.Term.Core
+import SymbolicLean.Term.Literals
+import SymbolicLean.Term.Arithmetic
+import SymbolicLean.Term.Logic
+import SymbolicLean.Term.Relations
+import SymbolicLean.Term.Calculus
+import SymbolicLean.Term.Application

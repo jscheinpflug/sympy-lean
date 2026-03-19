@@ -2,6 +2,7 @@
 
 ## Core Principle
 Repository state is the system of record. Documentation is versioned in `/docs` and discovered progressively through short index files.
+Small, responsibility-aligned source files are the main localization mechanism that makes the mirrored-doc harness useful in practice.
 
 ## Entry Points
 - `AGENTS.md` and `CLAUDE.md` are index-only documents.

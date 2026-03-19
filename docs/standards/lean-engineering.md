@@ -5,10 +5,22 @@
 - Encode invariants in types before adding runtime checks.
 - Prefer small composable definitions over monolithic tactics or giant functions.
 
+## File Structure
+- Target roughly 80-150 LOC per Lean file.
+- Split modules before they turn into 200+ LOC kitchen-sink files.
+- Keep one primary responsibility per file.
+- Organize folders by concern so source and mirrored docs stay local and self-documenting.
+
 ## Type System Usage
 - Keep interfaces polymorphic over the weakest required structure (`Semiring`, `Ring`, `Field`, etc.).
 - Use typeclasses to express algebraic capability requirements precisely.
 - Prefer explicit structure and dependent typing when it clarifies legal transformations.
+
+## Import Discipline
+- Do not use `import Mathlib` in ordinary project files.
+- Import the narrowest `Mathlib/...` modules that the file actually needs.
+- If a file typechecks without mathlib, do not add a mathlib import preemptively.
+- Treat broad umbrella imports as a performance regression, especially for Lean LSP restart-file workflows in editors.
 
 ## Proof and API Design
 - Keep theorem statements stable and intention-revealing.
