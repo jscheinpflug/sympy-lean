@@ -270,42 +270,42 @@ This file is the implementation checklist. Each item explains why it exists, wha
 
 ## Phase 8: Syntax And Sugar
 
-- [ ] Implement `SymbolicLean/Syntax/Term.lean`.
+- [x] Implement `SymbolicLean/Syntax/Term.lean`.
   Why: `term![...]` is the main ergonomic gateway into the pure symbolic layer.
   Do: elaborate identifiers, numerals, unary minus, `+ - * / ^`, unary application, relations, boolean connectives, membership, and derivative syntax into `Term`.
   Done when: the planned examples can be written with `term!` instead of raw constructors.
 
-- [ ] Keep identifier resolution in `term!` explicit.
+- [x] Keep identifier resolution in `term!` explicit.
   Why: implicit name synthesis would blur the pure declaration layer and make ordinary code harder to reason about.
   Do: resolve only bound locals, including pure declarations and prebuilt terms.
   Done when: ordinary `term!` does not auto-create free symbolic names.
 
-- [ ] Implement `SymbolicLean/Syntax/Binders.lean`.
+- [x] Implement `SymbolicLean/Syntax/Binders.lean`.
   Why: repeated declaration creation is boilerplate and obscures the actual mathematics.
   Do: add `symbols x y z`, `functions f g`, and optional assumption-bearing forms such as `symbols (x : positive) (y : real) z`.
   Done when: session examples can declare pure symbols and function symbols concisely.
 
-- [ ] Fix the v1 defaults for binders.
+- [x] Fix the v1 defaults for binders.
   Why: `functions f g` must mean something concrete or it is not executable as a plan.
   Do: inside `sympy d do`, make `symbols` default to scalar declarations of sort `.scalar d` and make `functions` default to unary scalar-to-scalar declarations over `.scalar d`.
   Done when: the ODE example is fully specified without hidden decisions.
 
-- [ ] Implement `SymbolicLean/Syntax/Subst.lean`.
+- [x] Implement `SymbolicLean/Syntax/Subst.lean`.
   Why: substitution is frequent enough to deserve direct notation.
   Do: add `expr[x ↦ 2, y ↦ 3]` and lower it to the ordinary typed substitution API.
   Done when: substitution sugar exists without introducing a second semantic path.
 
-- [ ] Implement `SymbolicLean/Syntax/Command.lean` for `sympy d do ...`.
+- [x] Implement `SymbolicLean/Syntax/Command.lean` for `sympy d do ...`.
   Why: users need one obvious way to open a session, install a default scalar domain, and use the sugar together.
   Do: wrap `withSession`, install the default domain, and bring constructors and binder macros into scope.
   Done when: the common examples can be written inside a compact `sympy ... do` block without hidden name creation.
 
-- [ ] Implement `SymbolicLean/Syntax/Command.lean` for `#sympy d ...`.
+- [x] Implement `SymbolicLean/Syntax/Command.lean` for `#sympy d ...`.
   Why: the project needs a quick exploratory interface during development and debugging.
   Do: keep v1 scope intentionally narrow: scalar exploration only, auto-created scalar declarations, realized evaluation, and pretty-printed output.
   Done when: a user can try scalar expressions interactively without writing a full session block.
 
-- [ ] Keep richer calculus notation out of v1 unless the earlier sugar lands cleanly.
+- [x] Keep richer calculus notation out of v1 unless the earlier sugar lands cleanly.
   Why: extra parser surface is lower value than stabilizing the core sugar.
   Do: treat `∂` and `∫` as optional follow-up work, not a dependency.
   Done when: they are absent from v1 unless clearly justified and still implemented in small files.

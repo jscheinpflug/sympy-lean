@@ -11,6 +11,9 @@
 - `IntoSymExpr`
 - `IntoSymSymbol`
 - `IntoSymFun`
+- `substPair`
+- `substTermPair`
+- `subs`
 - `simplify`
 - `factor`
 - `expand`

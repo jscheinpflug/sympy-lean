@@ -5,10 +5,11 @@
 
 ## Responsibilities
 - Define the first effectful algebra operations over realized `SymExpr` values.
-- Keep substitution typed by pairing source and replacement expressions of the same sort.
+- Keep substitution typed by pairing source and replacement expressions with an explicit compatibility relation.
 - Keep the low-level realized-object entry points separate from the later conversion layer in `Ops/Core`.
 
 ## Public Surface
+- `SubstCompat`
 - `SubstPair`
 - `simplifyExpr`
 - `factorExpr`
@@ -24,5 +25,6 @@
 ## Related Files
 - [`Core.lean.md`](Core.lean.md)
 - [`../Backend/Client.lean.md`](../Backend/Client.lean.md)
+- [`../Syntax/DeclareOp.lean.md`](../Syntax/DeclareOp.lean.md)
 - [`../Backend/Realize.lean.md`](../Backend/Realize.lean.md)
 - [`../SymExpr/Core.lean.md`](../SymExpr/Core.lean.md)

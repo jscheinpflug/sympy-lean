@@ -1,30 +1,32 @@
 import SymbolicLean.Backend.Client
+import SymbolicLean.Syntax.DeclareOp
 import SymbolicLean.SymExpr.Core
 
 namespace SymbolicLean
 
 open Lean
 
+class SubstCompat (fromSort toSort : SSort) : Prop where
+  compat : True := True.intro
+
+instance : SubstCompat σ σ where
+
+instance (priority := low) : SubstCompat (.scalar d1) (.scalar d2) where
+
 structure SubstPair (s : SessionTok) where
-  σ : SSort
-  fromExpr : SymExpr s σ
-  toExpr : SymExpr s σ
+  fromSort : SSort
+  toSort : SSort
+  [compat : SubstCompat fromSort toSort]
+  fromExpr : SymExpr s fromSort
+  toExpr : SymExpr s toSort
 
-private def unaryPreserving (op : String) (expr : SymExpr s σ) : SymPyM s (SymExpr s σ) := do
-  let ref ← applyOpRemoteRef σ op expr.ref
-  pure { ref := ref }
+declare_sympy_op simplifyExpr => "simplify"
 
-def simplifyExpr (expr : SymExpr s σ) : SymPyM s (SymExpr s σ) :=
-  unaryPreserving "simplify" expr
+declare_sympy_op factorExpr => "factor"
 
-def factorExpr (expr : SymExpr s σ) : SymPyM s (SymExpr s σ) :=
-  unaryPreserving "factor" expr
+declare_sympy_op expandExpr => "expand"
 
-def expandExpr (expr : SymExpr s σ) : SymPyM s (SymExpr s σ) :=
-  unaryPreserving "expand" expr
-
-def cancelExpr (expr : SymExpr s σ) : SymPyM s (SymExpr s σ) :=
-  unaryPreserving "cancel" expr
+declare_sympy_op cancelExpr => "cancel"
 
 private def encodeSubstPairs (pairs : List (SubstPair s)) : Json :=
   Json.arr <| pairs.toArray.map fun pair =>

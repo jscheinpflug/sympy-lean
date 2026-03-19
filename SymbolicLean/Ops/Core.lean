@@ -44,6 +44,26 @@ def expand [IntoSymExpr s α σ] (expr : α) : SymPyM s (SymExpr s σ) := do
 def cancel [IntoSymExpr s α σ] (expr : α) : SymPyM s (SymExpr s σ) := do
   cancelExpr (← IntoSymExpr.intoSymExpr expr)
 
+def substPair [IntoSymExpr s α σ] [IntoSymExpr s β τ] [SubstCompat σ τ]
+    (fromExpr : α) (toExpr : β) : SymPyM s (SubstPair s) := do
+  pure
+    { fromSort := σ
+      toSort := τ
+      fromExpr := ← IntoSymExpr.intoSymExpr fromExpr
+      toExpr := ← IntoSymExpr.intoSymExpr toExpr }
+
+def substTermPair [SubstCompat σ τ]
+    (fromExpr : Term σ) (toExpr : Term τ) : SymPyM s (SubstPair s) := do
+  pure
+    { fromSort := σ
+      toSort := τ
+      fromExpr := ← eval fromExpr
+      toExpr := ← eval toExpr }
+
+def subs [IntoSymExpr s α σ]
+    (expr : α) (pairs : List (SymPyM s (SubstPair s))) : SymPyM s (SymExpr s σ) := do
+  subsExpr (← IntoSymExpr.intoSymExpr expr) (← pairs.mapM id)
+
 def solveUnivariate [IntoSymExpr s α (.scalar d)] [IntoSymSymbol s β (.scalar d)]
     (expr : α) (x : β) : SymPyM s (FiniteSolve s (.scalar d)) := do
   solveUnivariateExpr (← IntoSymExpr.intoSymExpr expr) (← IntoSymSymbol.intoSymSymbol x)

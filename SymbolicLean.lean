@@ -23,6 +23,11 @@ import SymbolicLean.Ops.Core
 import SymbolicLean.Ops.LinearAlgebra
 import SymbolicLean.Ops.Results
 import SymbolicLean.Ops.Solvers
+import SymbolicLean.Syntax.Binders
+import SymbolicLean.Syntax.Command
+import SymbolicLean.Syntax.DeclareOp
+import SymbolicLean.Syntax.Subst
+import SymbolicLean.Syntax.Term
 import SymbolicLean.Term.Core
 import SymbolicLean.Term.Literals
 import SymbolicLean.Term.Arithmetic
