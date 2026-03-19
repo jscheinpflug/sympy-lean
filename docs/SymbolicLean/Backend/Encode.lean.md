@@ -6,6 +6,7 @@
 ## Responsibilities
 - Encode pure `Term` values into the JSON term language understood by the SymPy worker.
 - Provide typed request constructors for the common worker commands.
+- Attach sort metadata when symbol atoms or symbol-realization requests need non-scalar backend objects.
 
 ## Public Surface
 - `encodeTruth`

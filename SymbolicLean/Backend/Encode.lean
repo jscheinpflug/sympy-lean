@@ -9,6 +9,17 @@ open Lean
 private def mkTagged (tag : String) (fields : List (String × Json)) : Json :=
   Json.mkObj <| ("tag", toJson tag) :: fields
 
+private def encodeDim : Dim → Json
+  | .static value => mkTagged "static" [("value", toJson value)]
+  | .dyn name => mkTagged "dyn" [("name", toJson name.toString)]
+
+private def encodeSort : SSort → Json
+  | .boolean => mkTagged "boolean" []
+  | .scalar _ => mkTagged "scalar" []
+  | .matrix _ rows cols =>
+      mkTagged "matrix" [("rows", encodeDim rows), ("cols", encodeDim cols)]
+  | _ => mkTagged "other" []
+
 def encodeTruth : Truth → Json
   | .true_ => toJson "true"
   | .false_ => toJson "false"
@@ -27,9 +38,10 @@ def encodeRelKind : RelKind → Json
 mutual
 
 def encodeAtom : Atom σ → Json
-  | .sym decl =>
+  | @Atom.sym σ decl =>
       mkTagged "atomSym"
-        [("name", toJson decl.name), ("assumptions", toJson decl.assumptions)]
+        [("name", toJson decl.name), ("assumptions", toJson decl.assumptions),
+          ("sort", encodeSort σ)]
   | @Atom.fun_ args _ decl =>
       mkTagged "atomFun" [("name", toJson decl.name), ("arity", toJson args.length)]
 
@@ -90,7 +102,7 @@ def pingRequest (id : Nat) : WorkerRequest where
 
 def mkSymbolRequest (id : Nat) (decl : SymDecl σ) : WorkerRequest where
   id := id
-  payload := .mkSymbol { name := decl.name, assumptions := decl.assumptions }
+  payload := .mkSymbol { name := decl.name, assumptions := decl.assumptions, sort := encodeSort σ }
 
 def mkFunctionRequest (id : Nat) (decl : FunDecl args ret) : WorkerRequest where
   id := id

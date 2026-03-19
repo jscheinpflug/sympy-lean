@@ -12,7 +12,8 @@ def protocolVersion : Nat := 1
 structure SymbolSpec where
   name : Lean.Name
   assumptions : List AssumptionFact := []
-  deriving Repr, DecidableEq, Inhabited, ToJson, FromJson
+  sort : Json := Json.mkObj [("tag", toJson "scalar")]
+  deriving Inhabited, ToJson, FromJson
 
 structure FunctionSpec where
   name : Lean.Name

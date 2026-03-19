@@ -2,7 +2,7 @@
 
 ## Summary
 - This plan tracks the first implementation slice of the corrected architecture.
-- The current target now includes the first backend transport slice: worker protocol types, term encoding/decoding, the Python worker entrypoint, a persistent Lean-side client, and declaration realization helpers.
+- The current target now includes the first backend transport slice plus the first effectful algebra, calculus, linear-algebra, and solver ops over realized expressions, along with the initial pure-to-realized conversion layer.
 - Backend encoding, realization, client integration, effectful SymPy operations, syntax DSLs, and examples remain follow-up work.
 
 ## Source Of Truth

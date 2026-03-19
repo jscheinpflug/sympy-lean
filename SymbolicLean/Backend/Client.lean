@@ -110,6 +110,12 @@ def applyOpRemote (op : String) (target : Ref) (args : List Json := [])
   let request := applyOpRequest (← nextRequestId) op target.ident args kwargs
   sendRequest request
 
+def applyOpRemoteRef (σ : SSort) (op : String) (target : Ref) (args : List Json := [])
+    (kwargs : Json := Json.mkObj []) : SymPyM s Ref := do
+  let ref ← decodeRef (← applyOpRemote op target args kwargs)
+  rememberRef ref σ
+  pure ref
+
 def prettyRemote (target : Ref) : SymPyM s String := do
   let request := prettyRequest (← nextRequestId) target.ident
   let rendered ← decodePretty (← sendRequest request)

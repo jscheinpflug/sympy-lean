@@ -238,32 +238,32 @@ This file is the implementation checklist. Each item explains why it exists, wha
 
 ## Phase 7: Effectful Symbolic Operations
 
-- [ ] Implement `SymbolicLean/Ops/Algebra.lean`.
+- [x] Implement `SymbolicLean/Ops/Algebra.lean`.
   Why: algebraic transforms are the most common first interaction with a CAS.
   Do: add `simplify`, `factor`, `expand`, `cancel`, and `subs`.
   Done when: common scalar-algebra examples can run entirely through the Lean API.
 
-- [ ] Implement `SymbolicLean/Ops/Calculus.lean`.
+- [x] Implement `SymbolicLean/Ops/Calculus.lean`.
   Why: symbolic calculus is a major SymPy strength and is needed for solver workflows.
   Do: add `diffExpr`, `integrate`, `limit`, and minimal series support.
   Done when: the planned calculus and ODE examples can be expressed without missing backend operations.
 
-- [ ] Implement `SymbolicLean/Ops/LinearAlgebra.lean`.
+- [x] Implement `SymbolicLean/Ops/LinearAlgebra.lean`.
   Why: typed matrix operations are one of the clearest benefits of the design.
   Do: add `det`, `inv`, and `rref`.
   Done when: matrix examples work and field-only operations respect domain constraints.
 
-- [ ] Implement `SymbolicLean/Ops/Solvers.lean`.
+- [x] Implement `SymbolicLean/Ops/Solvers.lean`.
   Why: solver APIs justify the whole Lean-to-SymPy bridge.
   Do: add `solveUnivariate`, `solveset`, `dsolve`, `satisfiable`, and `ask`.
   Done when: the v1 solver examples compile and run through typed result containers.
 
-- [ ] Define structured result types in the smallest sensible files.
+- [x] Define structured result types in the smallest sensible files.
   Why: solver and query results should not leak raw JSON or untyped lists.
   Do: define `FiniteSolve`, `EvalOr`, `ODESolution`, and `SolveSetResult`.
   Done when: each nontrivial operation returns a typed Lean container with a clear public surface.
 
-- [ ] Implement the small front-door conversion layer in `Ops/Core.lean`.
+- [x] Implement the small front-door conversion layer in `Ops/Core.lean`.
   Why: a few high-frequency APIs should accept pure and realized inputs without collapsing the architecture.
   Do: add `IntoSymExpr` for `Term` and `SymExpr`, `IntoSymSymbol` for `SymDecl` and `SymSymbol`, and `IntoSymFun` for `FunDecl` and `SymFun`.
   Done when: users can write `factor term![...]`, `ask x ...`, and `dsolve term![...] f` while low-level APIs remain clearly realized-object APIs.

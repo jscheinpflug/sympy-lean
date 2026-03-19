@@ -16,6 +16,7 @@
 - `mkFunctionRemote`
 - `evalTermRemote`
 - `applyOpRemote`
+- `applyOpRemoteRef`
 - `prettyRemote`
 - `releaseRemote`
 

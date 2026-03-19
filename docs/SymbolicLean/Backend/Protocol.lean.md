@@ -6,6 +6,7 @@
 ## Responsibilities
 - Define the typed JSON wire protocol for the Python SymPy worker.
 - Keep request and response payloads versioned and explicit on the Lean side.
+- Carry enough symbol metadata for the worker to realize non-scalar declarations like matrices.
 
 ## Public Surface
 - `WireRef`

@@ -17,6 +17,12 @@ import SymbolicLean.SymExpr.Refined
 import SymbolicLean.Session.Errors
 import SymbolicLean.Session.State
 import SymbolicLean.Session.Monad
+import SymbolicLean.Ops.Algebra
+import SymbolicLean.Ops.Calculus
+import SymbolicLean.Ops.Core
+import SymbolicLean.Ops.LinearAlgebra
+import SymbolicLean.Ops.Results
+import SymbolicLean.Ops.Solvers
 import SymbolicLean.Term.Core
 import SymbolicLean.Term.Literals
 import SymbolicLean.Term.Arithmetic
