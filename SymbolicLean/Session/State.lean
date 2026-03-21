@@ -28,6 +28,7 @@ structure SessionState where
   nextRequestId : Nat := 0
   nextRef : Nat := 0
   worker : Option WorkerProcess := none
+  workerReady : Bool := false
   liveRefs : Std.HashMap Ref SSort := {}
   declIntern : Std.HashMap DeclKey Ref := {}
   canonicalRefs : Std.HashMap UInt64 Ref := {}

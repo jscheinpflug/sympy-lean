@@ -6,6 +6,7 @@
 ## Responsibilities
 - Provide named helpers for boolean-valued pure terms.
 - Keep boolean connective helpers separate from the core AST definition.
+- Route boolean helpers through the `CoreHead`/`headApp` compatibility layer.
 
 ## Public Surface
 - `verum`

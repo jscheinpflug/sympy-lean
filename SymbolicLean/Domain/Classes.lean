@@ -15,6 +15,9 @@ class DomainCarrier (d : DomainDesc) where
 
 abbrev CarrierOf (d : DomainDesc) [DomainCarrier d] : Type := DomainCarrier.Carrier d
 
+class CarrierDomain (α : Type) where
+  domain : DomainDesc
+
 class InterpretsDomain (d : DomainDesc) [DomainCarrier d] where
   instNonempty : Nonempty (CarrierOf d)
 
@@ -49,20 +52,38 @@ instance [DomainCarrier d] [InterpretsCommRing d] : InterpretsDomain d := ⟨inf
 instance : DomainCarrier (.ground .ZZ) where
   Carrier := Int
 
+instance : CarrierDomain Int where
+  domain := .ground .ZZ
+
 instance : DomainCarrier (.ground .QQ) where
   Carrier := Rat
+
+instance : CarrierDomain Rat where
+  domain := .ground .QQ
 
 instance : DomainCarrier (.ground .RR) where
   Carrier := Real
 
+noncomputable instance : CarrierDomain Real where
+  domain := .ground .RR
+
 instance : DomainCarrier (.ground .CC) where
   Carrier := Complex
+
+noncomputable instance : CarrierDomain Complex where
+  domain := .ground .CC
 
 instance : DomainCarrier (.ground .gaussianZZ) where
   Carrier := GaussianInt
 
+instance : CarrierDomain GaussianInt where
+  domain := .ground .gaussianZZ
+
 instance (p : Nat) : DomainCarrier (.ground (.GF p)) where
   Carrier := ZMod p
+
+instance (p : Nat) : CarrierDomain (ZMod p) where
+  domain := .ground (.GF p)
 
 instance : InterpretsIntegralDomain (.ground .ZZ) where
   instCommRing := show CommRing Int from inferInstance

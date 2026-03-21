@@ -11,11 +11,12 @@
 - `zz`
 - `qq`
 - `instOfNatZZTerm`
+- `instOfNatQQTerm`
 
 ## Change Triggers
 - Literal defaults change.
 - Additional scalar literal helpers are introduced.
-- `term!` elaboration starts depending on richer literal support.
+- Ordinary-Lean symbolic elaboration starts depending on richer literal support.
 
 ## Related Files
 - [`Core.lean.md`](Core.lean.md)

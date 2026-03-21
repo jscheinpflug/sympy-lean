@@ -14,5 +14,5 @@
 - Lake resolver changes.
 
 ## Related Files
-- [`lakefile.toml.md`](lakefile.toml.md)
+- [`lakefile.lean.md`](lakefile.lean.md)
 - [`lean-toolchain.md`](lean-toolchain.md)

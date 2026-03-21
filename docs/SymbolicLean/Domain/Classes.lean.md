@@ -6,11 +6,13 @@
 ## Responsibilities
 - Define the Lean-side typeclass bridge for symbolic domains.
 - Interpret common symbolic domains through mathlib carrier types and algebraic capabilities.
+- Expose the carrier-to-domain bridge used by the public alias layer.
 - Provide the `UnifyDomain` rules used by mixed-domain scalar arithmetic.
 
 ## Public Surface
 - `DomainCarrier`
 - `CarrierOf`
+- `CarrierDomain`
 - `InterpretsDomain`
 - `InterpretsCommRing`
 - `InterpretsIntegralDomain`
@@ -24,5 +26,6 @@
 
 ## Related Files
 - [`Desc.lean.md`](Desc.lean.md)
+- [`../Sort/Aliases.lean.md`](../Sort/Aliases.lean.md)
 - [`../Term/Arithmetic.lean.md`](../Term/Arithmetic.lean.md)
-- [`../../lakefile.toml.md`](../../lakefile.toml.md)
+- [`../../lakefile.lean.md`](../../lakefile.lean.md)

@@ -6,6 +6,7 @@
 ## Responsibilities
 - Define the root library module for `SymbolicLean`.
 - Aggregate the public foundation modules for declarations, backend transport, domains, sorts, sessions, runtime handles, and pure terms.
+- Re-export the public carrier-based sort alias layer.
 
 ## Public Surface
 - Re-exports from the current `SymbolicLean/**` foundation modules.
@@ -23,6 +24,7 @@
 - [`SymbolicLean/Backend/Protocol.lean.md`](SymbolicLean/Backend/Protocol.lean.md)
 - [`SymbolicLean/Backend/Realize.lean.md`](SymbolicLean/Backend/Realize.lean.md)
 - [`SymbolicLean/Domain/Desc.lean.md`](SymbolicLean/Domain/Desc.lean.md)
+- [`SymbolicLean/Sort/Aliases.lean.md`](SymbolicLean/Sort/Aliases.lean.md)
 - [`SymbolicLean/Sort/Base.lean.md`](SymbolicLean/Sort/Base.lean.md)
 - [`SymbolicLean/Session/Monad.lean.md`](SymbolicLean/Session/Monad.lean.md)
 - [`SymbolicLean/Ops/Algebra.lean.md`](SymbolicLean/Ops/Algebra.lean.md)
@@ -33,8 +35,12 @@
 - [`SymbolicLean/Ops/Solvers.lean.md`](SymbolicLean/Ops/Solvers.lean.md)
 - [`SymbolicLean/Syntax/Binders.lean.md`](SymbolicLean/Syntax/Binders.lean.md)
 - [`SymbolicLean/Syntax/Command.lean.md`](SymbolicLean/Syntax/Command.lean.md)
+- [`SymbolicLean/Syntax/Registry.lean.md`](SymbolicLean/Syntax/Registry.lean.md)
 - [`SymbolicLean/Syntax/DeclareOp.lean.md`](SymbolicLean/Syntax/DeclareOp.lean.md)
+- [`SymbolicLean/Syntax/Search.lean.md`](SymbolicLean/Syntax/Search.lean.md)
 - [`SymbolicLean/Syntax/Subst.lean.md`](SymbolicLean/Syntax/Subst.lean.md)
-- [`SymbolicLean/Syntax/Term.lean.md`](SymbolicLean/Syntax/Term.lean.md)
 - [`SymbolicLean/Term/Core.lean.md`](SymbolicLean/Term/Core.lean.md)
+- [`SymbolicLean/Term/Head.lean.md`](SymbolicLean/Term/Head.lean.md)
+- [`SymbolicLean/Term/View.lean.md`](SymbolicLean/Term/View.lean.md)
+- [`SymbolicLean/Term/Canon.lean.md`](SymbolicLean/Term/Canon.lean.md)
 - [`Main.lean.md`](Main.lean.md)

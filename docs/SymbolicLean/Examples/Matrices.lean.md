@@ -4,10 +4,12 @@
 - [`../../../SymbolicLean/Examples/Matrices.lean`](../../../SymbolicLean/Examples/Matrices.lean)
 
 ## Responsibilities
-- Demonstrate dimension-checked matrix workflows and effectful determinant computation.
+- Demonstrate dimension-checked matrix workflows and effectful determinant computation on carrier-based aliases.
+- Smoke-test the matrix inverse wrapper from the public front door.
 
 ## Public Surface
-- Executable matrix-vector multiplication and determinant examples.
+- Typechecking example for `A * v`.
+- Executable matrix-vector multiplication, determinant, and inverse examples.
 
 ## Change Triggers
 - Matrix declaration or realization flows change.
@@ -15,4 +17,4 @@
 
 ## Related Files
 - [`../Ops/LinearAlgebra.lean.md`](../Ops/LinearAlgebra.lean.md)
-- [`../Syntax/Term.lean.md`](../Syntax/Term.lean.md)
+- [`../Syntax/Command.lean.md`](../Syntax/Command.lean.md)

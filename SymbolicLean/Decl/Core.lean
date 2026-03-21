@@ -12,6 +12,22 @@ structure FunDecl (args : List SSort) (ret : SSort) where
   name : Lean.Name
   deriving Repr, BEq, Hashable
 
+def symWith (name : Lean.Name) (assumptions : List AssumptionFact := []) : SymDecl σ where
+  name := name
+  assumptions := assumptions
+
+def sym (name : Lean.Name) : SymDecl σ :=
+  symWith (σ := σ) name
+
+def SymDecl.withAssumptions (decl : SymDecl σ) (assumptions : List AssumptionFact) : SymDecl σ :=
+  symWith (σ := σ) decl.name assumptions
+
+def SymDecl.addAssumption (decl : SymDecl σ) (query : Assumption) : SymDecl σ :=
+  decl.withAssumptions (decl.assumptions ++ [{ assumption := query }])
+
+def funSym (name : Lean.Name) : FunDecl args ret where
+  name := name
+
 inductive DeclKind where
   | sym
   | fun_

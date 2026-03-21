@@ -1,4 +1,8 @@
+import Lean.Data.Json
+
 namespace SymbolicLean
+
+open Lean
 
 inductive SymExt where
   | geometry
@@ -9,6 +13,6 @@ inductive SymExt where
   | codegen
   | numberTheory
   | other : Lean.Name → SymExt
-  deriving Repr, DecidableEq, BEq, Hashable
+  deriving Repr, DecidableEq, BEq, Hashable, ToJson, FromJson
 
 end SymbolicLean

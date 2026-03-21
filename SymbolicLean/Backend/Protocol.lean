@@ -8,6 +8,7 @@ open Lean
 abbrev WireRef := Nat
 
 def protocolVersion : Nat := 1
+def manifestVersion : Nat := 1
 
 structure SymbolSpec where
   name : Lean.Name
@@ -18,11 +19,16 @@ structure SymbolSpec where
 structure FunctionSpec where
   name : Lean.Name
   arity : Nat
-  deriving Repr, DecidableEq, Inhabited, ToJson, FromJson
+  sort : Json := Json.mkObj [("tag", toJson "other")]
+  deriving Inhabited, ToJson, FromJson
 
 structure EvalTermReq where
   term : Json
   deriving Inhabited, ToJson, FromJson
+
+structure ReifyReq where
+  ref : WireRef
+  deriving Repr, DecidableEq, Inhabited, ToJson, FromJson
 
 structure ApplyOpReq where
   op : String
@@ -44,6 +50,7 @@ inductive WorkerRequestPayload where
   | mkSymbol (spec : SymbolSpec)
   | mkFunction (spec : FunctionSpec)
   | evalTerm (req : EvalTermReq)
+  | reify (req : ReifyReq)
   | applyOp (req : ApplyOpReq)
   | pretty (req : PrettyReq)
   | release (req : ReleaseReq)
@@ -57,6 +64,7 @@ structure WorkerRequest where
 
 structure PongInfo where
   sympyVersion : String
+  manifestVersion : Nat := 0
   capabilities : List String := []
   deriving Repr, DecidableEq, Inhabited, ToJson, FromJson
 

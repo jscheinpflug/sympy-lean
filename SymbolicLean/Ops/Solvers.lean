@@ -74,35 +74,52 @@ private def encodeAssumptionQuery : Assumption → Json
   | .finite => toJson "finite"
   | .invertible => toJson "invertible"
 
+instance {s : SessionTok} : OpPayloadDecode s SatisfiableResult where
+  decodePayload payload := do
+    match payload with
+    | .bool false => pure .unsat
+    | .str "False" => pure .unsat
+    | _ => pure <| .model (← liftExcept <| decodeModelAssignments payload)
+
+instance {s : SessionTok} : OpPayloadDecode s Truth where
+  decodePayload payload := liftExcept <| decodeTruthResult payload
+
+instance {s : SessionTok} : OpPayloadDecode s (List Ref) where
+  decodePayload payload := liftExcept <| decodeRefList payload
+
+declare_op satisfiesFormula for (formula : SymExpr s .boolean)
+  decodes SatisfiableResult => "satisfiable"
+  doc "Check satisfiability and decode the returned model payload."
+
+declare_op askSymbol for (symbol : SymSymbol s (.scalar d)) (query : Assumption)
+  decodes Truth => "ask"
+  doc "Evaluate a SymPy assumption query on a realized scalar symbol."
+
+declare_op solveUnivariateRefs for (expr : SymExpr s (.scalar d)) (x : SymSymbol s (.scalar d))
+  decodes (List Ref) => "solve"
+  doc "Decode the finite list of solution refs returned by SymPy's `solve`."
+
 def solveUnivariateExpr (expr : SymExpr s (.scalar d)) (x : SymSymbol s (.scalar d)) :
     SymPyM s (FiniteSolve s (.scalar d)) := do
-  let payload ← liftExcept <| decodeJsonInfo (← applyOpRemote "solve" expr.ref [encodeRefArg x.expr.ref.ident])
-  let refs ← liftExcept <| decodeRefList payload
+  let refs ← solveUnivariateRefs expr x
   rememberRefs refs (.scalar d)
   pure { solutions := refs.map fun ref => { ref := ref } }
 
+declare_op solvesetExprCore for (expr : SymExpr s (.scalar d)) (x : SymSymbol s (.scalar d))
+  returns (.set (.scalar d)) => "solveset"
+  doc "Compute the realized solution set for a scalar equation."
+
 def solvesetExpr (expr : SymExpr s (.scalar d)) (x : SymSymbol s (.scalar d)) :
     SymPyM s (SolveSetResult s (.scalar d)) := do
-  let ref ← applyOpRemoteRef (.set (.scalar d)) "solveset" expr.ref [encodeRefArg x.expr.ref.ident]
-  pure { setExpr := { ref := ref } }
+  pure { setExpr := ← solvesetExprCore expr x }
 
-declare_sympy_op dsolveEquation for (ode : SymExpr s .boolean) returns .boolean => "dsolve"
+declare_op dsolveEquation for (ode : SymExpr s .boolean) returns .boolean => "dsolve"
   doc "Solve a realized ODE and return the resulting equation handle."
 
 def dsolveExpr (ode : SymExpr s .boolean) : SymPyM s (ODESolution s) := do
   pure { equation := ← dsolveEquation ode }
 
 def satisfiableExpr (formula : SymExpr s .boolean) : SymPyM s SatisfiableResult := do
-  let payload ← liftExcept <| decodeJsonInfo (← applyOpRemote "satisfiable" formula.ref)
-  match payload with
-  | .bool false => pure .unsat
-  | .str "False" => pure .unsat
-  | _ => pure <| .model (← liftExcept <| decodeModelAssignments payload)
-
-def askSymbol (symbol : SymSymbol s (.scalar d)) (query : Assumption) : SymPyM s Truth := do
-  let payload ←
-    liftExcept <|
-      decodeJsonInfo (← applyOpRemote "ask" symbol.expr.ref [encodeAssumptionQuery query])
-  liftExcept <| decodeTruthResult payload
+  satisfiesFormula formula
 
 end SymbolicLean

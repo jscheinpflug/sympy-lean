@@ -1,6 +1,7 @@
 import Lean.Data.Json
 import SymbolicLean.Backend.Protocol
-import SymbolicLean.Term.Core
+import SymbolicLean.Term.Calculus
+import SymbolicLean.Term.Head
 
 namespace SymbolicLean
 
@@ -15,10 +16,28 @@ private def encodeDim : Dim → Json
 
 private def encodeSort : SSort → Json
   | .boolean => mkTagged "boolean" []
-  | .scalar _ => mkTagged "scalar" []
-  | .matrix _ rows cols =>
-      mkTagged "matrix" [("rows", encodeDim rows), ("cols", encodeDim cols)]
-  | _ => mkTagged "other" []
+  | .scalar domain => mkTagged "scalar" [("domain", toJson domain)]
+  | .matrix domain rows cols =>
+      mkTagged "matrix" [("domain", toJson domain), ("rows", encodeDim rows), ("cols", encodeDim cols)]
+  | .tensor domain dims =>
+      mkTagged "tensor" [("domain", toJson domain), ("dims", toJson dims)]
+  | .set elem =>
+      mkTagged "set" [("elem", encodeSort elem)]
+  | .tuple items =>
+      mkTagged "tuple" [("items", toJson <| items.map encodeSort)]
+  | .seq elem =>
+      mkTagged "seq" [("elem", encodeSort elem)]
+  | .map key value =>
+      mkTagged "map" [("key", encodeSort key), ("value", encodeSort value)]
+  | .fn args ret =>
+      mkTagged "fn" [("args", toJson <| args.map encodeSort), ("ret", encodeSort ret)]
+  | .relation rel args =>
+      mkTagged "relationSort" [("kind", toJson rel), ("args", toJson <| args.map encodeSort)]
+  | .ext ext =>
+      mkTagged "ext" [("value", toJson ext)]
+
+private def withSort (tag : String) (sort : SSort) (fields : List (String × Json)) : Json :=
+  mkTagged tag (("sort", encodeSort sort) :: fields)
 
 def encodeTruth : Truth → Json
   | .true_ => toJson "true"
@@ -35,58 +54,71 @@ def encodeRelKind : RelKind → Json
   | .mem => toJson "mem"
   | .subset => toJson "subset"
 
+private def encodeHeadIdentity {schema : HeadSchema} (head : Head schema) : Json :=
+  match head with
+  | .core coreHead =>
+      match coreHead with
+      | @CoreHead.truth value =>
+          Json.mkObj [("name", toJson "truth"), ("truth", encodeTruth value)]
+      | @CoreHead.relation rel _ _ =>
+          Json.mkObj [("name", toJson "relation"), ("rel", encodeRelKind rel)]
+      | _ =>
+          Json.mkObj [("name", toJson coreHead.backendName)]
+  | .ext spec =>
+      Json.mkObj [("name", toJson spec.name.toString)]
+
 mutual
 
-def encodeAtom : Atom σ → Json
+partial def encodeAtom : Atom σ → Json
   | @Atom.sym σ decl =>
-      mkTagged "atomSym"
-        [("name", toJson decl.name), ("assumptions", toJson decl.assumptions),
-          ("sort", encodeSort σ)]
-  | @Atom.fun_ args _ decl =>
-      mkTagged "atomFun" [("name", toJson decl.name), ("arity", toJson args.length)]
+      withSort "atomSym" σ
+        [("name", toJson decl.name), ("assumptions", toJson decl.assumptions)]
+  | @Atom.fun_ args ret decl =>
+      withSort "atomFun" (.fn args ret) [("name", toJson decl.name), ("arity", toJson args.length)]
 
-def encodeTerm : Term σ → Json
+private partial def encodeHeadApp {schema : HeadSchema} (head : Head schema) (args : Args schema.args) : Json :=
+  withSort "headApp" schema.result
+    [("head", encodeHeadIdentity head), ("args", toJson (encodeArgs args))]
+
+partial def encodeTerm : Term σ → Json
   | .atom atom => encodeAtom atom
-  | .natLit value => mkTagged "natLit" [("value", toJson value)]
-  | .intLit value => mkTagged "intLit" [("value", toJson value)]
+  | .natLit value => withSort "natLit" σ [("value", toJson value)]
+  | .intLit value => withSort "intLit" σ [("value", toJson value)]
   | .ratLit value =>
-      mkTagged "ratLit" [("num", toJson value.num), ("den", toJson value.den)]
-  | .scalarNeg arg => mkTagged "scalarNeg" [("arg", encodeTerm arg)]
-  | @Term.scalarAdd _ _ _ _ lhs rhs =>
-      mkTagged "scalarAdd" [("lhs", encodeTerm lhs), ("rhs", encodeTerm rhs)]
-  | @Term.scalarSub _ _ _ _ lhs rhs =>
-      mkTagged "scalarSub" [("lhs", encodeTerm lhs), ("rhs", encodeTerm rhs)]
-  | @Term.scalarMul _ _ _ _ lhs rhs =>
-      mkTagged "scalarMul" [("lhs", encodeTerm lhs), ("rhs", encodeTerm rhs)]
-  | .scalarDiv lhs rhs => mkTagged "scalarDiv" [("lhs", encodeTerm lhs), ("rhs", encodeTerm rhs)]
-  | .scalarPow lhs rhs => mkTagged "scalarPow" [("lhs", encodeTerm lhs), ("rhs", encodeTerm rhs)]
-  | .matrixAdd lhs rhs => mkTagged "matrixAdd" [("lhs", encodeTerm lhs), ("rhs", encodeTerm rhs)]
-  | .matrixSub lhs rhs => mkTagged "matrixSub" [("lhs", encodeTerm lhs), ("rhs", encodeTerm rhs)]
-  | .matrixMul lhs rhs => mkTagged "matrixMul" [("lhs", encodeTerm lhs), ("rhs", encodeTerm rhs)]
-  | .truth value => mkTagged "truth" [("value", encodeTruth value)]
-  | .not_ arg => mkTagged "not" [("arg", encodeTerm arg)]
-  | .and_ lhs rhs => mkTagged "and" [("lhs", encodeTerm lhs), ("rhs", encodeTerm rhs)]
-  | .or_ lhs rhs => mkTagged "or" [("lhs", encodeTerm lhs), ("rhs", encodeTerm rhs)]
-  | .implies lhs rhs => mkTagged "implies" [("lhs", encodeTerm lhs), ("rhs", encodeTerm rhs)]
-  | .iff lhs rhs => mkTagged "iff" [("lhs", encodeTerm lhs), ("rhs", encodeTerm rhs)]
-  | .relation rel lhs rhs =>
-      mkTagged "relation"
-        [("kind", encodeRelKind rel), ("lhs", encodeTerm lhs), ("rhs", encodeTerm rhs)]
-  | .membership elem setTerm =>
-      mkTagged "membership" [("elem", encodeTerm elem), ("set", encodeTerm setTerm)]
-  | .diff body var order =>
-      mkTagged "diff"
-        [("body", encodeTerm body), ("var", toJson { name := var.name, assumptions := var.assumptions : SymbolSpec}), ("order", toJson order)]
-  | .integral body var =>
-      mkTagged "integral"
-        [("body", encodeTerm body), ("var", toJson { name := var.name, assumptions := var.assumptions : SymbolSpec})]
-  | .limit body var value =>
-      mkTagged "limit"
-        [("body", encodeTerm body), ("var", toJson { name := var.name, assumptions := var.assumptions : SymbolSpec}), ("value", encodeTerm value)]
+      withSort "ratLit" σ [("num", toJson value.num), ("den", toJson value.den)]
+  | .headApp head args => encodeHeadApp head args
+  | @Term.scalarAdd d1 d2 out _ lhs rhs =>
+      encodeHeadApp (.core (.scalarAdd d1 d2 out)) (.pair lhs rhs)
+  | @Term.scalarSub d1 d2 out _ lhs rhs =>
+      encodeHeadApp (.core (.scalarSub d1 d2 out)) (.pair lhs rhs)
+  | @Term.scalarMul d1 d2 out _ lhs rhs =>
+      encodeHeadApp (.core (.scalarMul d1 d2 out)) (.pair lhs rhs)
+  | .scalarNeg arg => encodeHeadApp (.core (.scalarNeg _)) (.singleton arg)
+  | .scalarDiv lhs rhs => encodeHeadApp (.core (.scalarDiv _)) (.pair lhs rhs)
+  | .scalarPow lhs rhs => encodeHeadApp (.core (.scalarPow _)) (.pair lhs rhs)
+  | .matrixAdd lhs rhs => encodeHeadApp (.core (.matrixAdd _ _ _)) (.pair lhs rhs)
+  | .matrixSub lhs rhs => encodeHeadApp (.core (.matrixSub _ _ _)) (.pair lhs rhs)
+  | .matrixMul lhs rhs => encodeHeadApp (.core (.matrixMul _ _ _ _)) (.pair lhs rhs)
+  | .truth value => encodeHeadApp (.core (.truth value)) .nil
+  | .not_ arg => encodeHeadApp (.core .not_) (.singleton arg)
+  | .and_ lhs rhs => encodeHeadApp (.core .and_) (.pair lhs rhs)
+  | .or_ lhs rhs => encodeHeadApp (.core .or_) (.pair lhs rhs)
+  | .implies lhs rhs => encodeHeadApp (.core .implies) (.pair lhs rhs)
+  | .iff lhs rhs => encodeHeadApp (.core .iff) (.pair lhs rhs)
+  | .relation rel lhs rhs => encodeHeadApp (.core (.relation rel _ _)) (.pair lhs rhs)
+  | .membership elem setTerm => encodeHeadApp (.core (.mem _)) (.pair elem setTerm)
+  | @Term.diff σ d body var order =>
+      encodeHeadApp (.ext (diffHeadSpec σ d))
+        (.cons body (.cons (var : Term (.scalar d)) (.cons (.natLit order) .nil)))
+  | @Term.integral d body var =>
+      encodeHeadApp (.ext (integralHeadSpec d)) (.pair body (var : Term (.scalar d)))
+  | @Term.limit d body var value =>
+      encodeHeadApp (.ext (limitHeadSpec d))
+        (.cons body (.cons (var : Term (.scalar d)) (.cons value .nil)))
   | .app fn args =>
-      mkTagged "app" [("fn", encodeTerm fn), ("args", toJson (encodeArgs args))]
+      withSort "app" σ [("fn", encodeTerm fn), ("args", toJson (encodeArgs args))]
 
-def encodeArgs : Args σs → List Json
+partial def encodeArgs : Args σs → List Json
   | .nil => []
   | .cons head tail => encodeTerm head :: encodeArgs tail
 
@@ -106,7 +138,7 @@ def mkSymbolRequest (id : Nat) (decl : SymDecl σ) : WorkerRequest where
 
 def mkFunctionRequest (id : Nat) (decl : FunDecl args ret) : WorkerRequest where
   id := id
-  payload := .mkFunction { name := decl.name, arity := args.length }
+  payload := .mkFunction { name := decl.name, arity := args.length, sort := encodeSort (.fn args ret) }
 
 def evalTermRequest (id : Nat) (term : Term σ) : WorkerRequest where
   id := id
@@ -116,6 +148,10 @@ def applyOpRequest (id : Nat) (op : String) (target : WireRef)
     (args : List Json := []) (kwargs : Json := Json.mkObj []) : WorkerRequest where
   id := id
   payload := .applyOp { op := op, target := target, args := args, kwargs := kwargs }
+
+def reifyRequest (id : Nat) (ref : WireRef) : WorkerRequest where
+  id := id
+  payload := .reify { ref := ref }
 
 def prettyRequest (id : Nat) (ref : WireRef) : WorkerRequest where
   id := id

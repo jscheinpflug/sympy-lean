@@ -14,12 +14,14 @@
 - `Term`
 - `Atom.ofDecl`
 - `Atom.ofFun`
+- coercion from `SymDecl σ` to `Term σ`
+- coercion from `FunDecl args ret` to `Term (.fn args ret)`
 - `Args.singleton`
 - `Args.pair`
 
 ## Change Triggers
 - Pure term constructors change.
-- Declaration-to-term boundaries change.
+- Declaration-to-term boundaries or coercions change.
 - New pure expression forms or scalar domain-unification rules are added.
 
 ## Related Files

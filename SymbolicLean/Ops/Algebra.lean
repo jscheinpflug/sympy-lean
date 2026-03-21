@@ -20,20 +20,22 @@ structure SubstPair (s : SessionTok) where
   fromExpr : SymExpr s fromSort
   toExpr : SymExpr s toSort
 
-declare_sympy_op simplifyExpr => "simplify" doc "Apply SymPy's `simplify` to a realized expression."
+declare_op simplifyExpr => "simplify" doc "Apply SymPy's `simplify` to a realized expression."
 
-declare_sympy_op factorExpr => "factor" doc "Factor a realized expression with SymPy."
+declare_op factorExpr => "factor" doc "Factor a realized expression with SymPy."
 
-declare_sympy_op expandExpr => "expand" doc "Expand a realized expression with SymPy."
+declare_op expandExpr => "expand" doc "Expand a realized expression with SymPy."
 
-declare_sympy_op cancelExpr => "cancel" doc "Cancel common factors in a realized expression."
+declare_op cancelExpr => "cancel" doc "Cancel common factors in a realized expression."
 
 private def encodeSubstPairs (pairs : List (SubstPair s)) : Json :=
   Json.arr <| pairs.toArray.map fun pair =>
     Json.arr #[encodeRefArg pair.fromExpr.ref.ident, encodeRefArg pair.toExpr.ref.ident]
 
+declare_op subsExprJson {σ : SSort} for (expr : SymExpr s σ) (pairs : Json) returns σ => "subs"
+  doc "Substitute a list of realized expression pairs into a realized expression."
+
 def subsExpr (expr : SymExpr s σ) (pairs : List (SubstPair s)) : SymPyM s (SymExpr s σ) := do
-  let ref ← applyOpRemoteRef σ "subs" expr.ref [encodeSubstPairs pairs]
-  pure { ref := ref }
+  subsExprJson expr (encodeSubstPairs pairs)
 
 end SymbolicLean

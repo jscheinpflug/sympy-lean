@@ -7,7 +7,7 @@
 - Pin representative compile-time rejection cases with `#guard_msgs`.
 
 ## Public Surface
-- Negative examples for dimension mismatch, non-field inversion, and invalid differentiation variables.
+- Negative examples for dimension mismatch, non-field inversion, invalid differentiation variables, removed `term!`, rejected raw-domain binder syntax, unresolved qualified-head fallback warnings, and worker startup version mismatches.
 
 ## Change Triggers
 - Error surfaces or failure modes change.
@@ -16,4 +16,4 @@
 ## Related Files
 - [`../Ops/LinearAlgebra.lean.md`](../Ops/LinearAlgebra.lean.md)
 - [`../Term/Calculus.lean.md`](../Term/Calculus.lean.md)
-- [`../Syntax/Term.lean.md`](../Syntax/Term.lean.md)
+- [`../Syntax/Command.lean.md`](../Syntax/Command.lean.md)

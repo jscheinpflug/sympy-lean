@@ -33,12 +33,25 @@ private def spawnWorkerIO (config : SessionConfig) : IO WorkerProcess := do
 
 def startWorker : SymPyM s Unit := do
   let state ← get
-  if state.worker.isSome then
+  if state.workerReady then
     pure ()
   else
     let config := (← read).config
     let worker ← runIO "startup" <| spawnWorkerIO config
-    modify fun st => { st with worker := some worker }
+    let pingLine := (toJson (pingRequest 0)).compress
+    runIO "startup" <| worker.stdin.putStrLn pingLine
+    runIO "startup" <| worker.stdin.flush
+    let responseLine ← runIO "startup" <| worker.child.stdout.getLine
+    if responseLine.isEmpty then
+      throw <| .worker <| .startupFailed "worker closed stdout during startup ping"
+    let pong ←
+      match parseResponseText responseLine >>= decodePong with
+      | .ok pong => pure pong
+      | .error err => throw err
+    if pong.manifestVersion != manifestVersion then
+      throw <| .protocol <| .invalidResponse
+        s!"worker manifest version mismatch: expected {manifestVersion}, got {pong.manifestVersion}"
+    modify fun st => { st with worker := some worker, workerReady := true }
 
 def stopWorker : SymPyM s Unit := do
   let state ← get
@@ -48,7 +61,7 @@ def stopWorker : SymPyM s Unit := do
       runIO "shutdown" worker.stdin.flush
       runIO "shutdown" worker.child.kill
       discard <| runIO "shutdown" worker.child.wait
-      modify fun st => { st with worker := none }
+      modify fun st => { st with worker := none, workerReady := false }
 
 private def nextRequestId : SymPyM s Nat := do
   let state ← get
@@ -127,5 +140,12 @@ def releaseRemote (refs : List Ref) : SymPyM s (List Ref) := do
   let released ← decodeReleased (← sendRequest request)
   forgetRefs released
   pure released
+
+noncomputable def reifyRemote (σ : SSort) (target : Ref) : SymPyM s (Term σ) := do
+  let request := reifyRequest (← nextRequestId) target.ident
+  let payload ← decodeJsonInfo (← sendRequest request)
+  match decodeTermAs σ payload with
+  | .ok term => pure term
+  | .error err => throw err
 
 end SymbolicLean

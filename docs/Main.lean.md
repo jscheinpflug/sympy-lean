@@ -17,4 +17,4 @@
 
 ## Related Files
 - [`SymbolicLean.lean.md`](SymbolicLean.lean.md)
-- [`lakefile.toml.md`](lakefile.toml.md)
+- [`lakefile.lean.md`](lakefile.lean.md)

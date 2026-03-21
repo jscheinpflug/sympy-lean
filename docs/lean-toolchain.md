@@ -14,5 +14,5 @@
 - Compatibility fixes across local and CI environments.
 
 ## Related Files
-- [`lakefile.toml.md`](lakefile.toml.md)
+- [`lakefile.lean.md`](lakefile.lean.md)
 - [`.github/workflows/lean_action_ci.yml.md`](.github/workflows/lean_action_ci.yml.md)

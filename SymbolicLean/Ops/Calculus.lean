@@ -1,33 +1,31 @@
 import Lean.Data.Json
-import SymbolicLean.Backend.Client
+import SymbolicLean.Syntax.DeclareOp
 import SymbolicLean.SymExpr.Refined
 
 namespace SymbolicLean
 
-open Lean
-
-private def refArg (expr : SymExpr s σ) : Json :=
-  encodeRefArg expr.ref.ident
+declare_op diffExprCore {σ : SSort} {d : DomainDesc}
+  for (expr : SymExpr s σ) (x : SymSymbol s (.scalar d)) (order : Nat) returns σ => "diff"
+  doc "Differentiate a realized expression with respect to a realized scalar symbol."
 
 def diffExpr (expr : SymExpr s σ) (x : SymSymbol s (.scalar d)) (order : Nat := 1) :
-    SymPyM s (SymExpr s σ) := do
-  let ref ← applyOpRemoteRef σ "diff" expr.ref [refArg x.expr, toJson order]
-  pure { ref := ref }
+    SymPyM s (SymExpr s σ) :=
+  diffExprCore expr x order
 
-def integrate (expr : SymExpr s (.scalar d)) (x : SymSymbol s (.scalar d)) :
-    SymPyM s (SymExpr s (.scalar d)) := do
-  let ref ← applyOpRemoteRef (.scalar d) "integrate" expr.ref [refArg x.expr]
-  pure { ref := ref }
+declare_op integrate for (expr : SymExpr s (.scalar d)) (x : SymSymbol s (.scalar d))
+  returns (.scalar d) => "integrate"
+  doc "Form a realized indefinite integral over a realized scalar symbol."
 
-def limitExpr (expr : SymExpr s (.scalar d)) (x : SymSymbol s (.scalar d))
-    (atPoint : SymExpr s (.scalar d)) : SymPyM s (SymExpr s (.scalar d)) := do
-  let ref ← applyOpRemoteRef (.scalar d) "limit" expr.ref [refArg x.expr, refArg atPoint]
-  pure { ref := ref }
+declare_op limitExpr for (expr : SymExpr s (.scalar d)) (x : SymSymbol s (.scalar d))
+  (atPoint : SymExpr s (.scalar d)) returns (.scalar d) => "limit"
+  doc "Compute a realized limit at a realized scalar point."
+
+declare_op seriesExprCore for (expr : SymExpr s (.scalar d)) (x : SymSymbol s (.scalar d))
+  (atPoint : SymExpr s (.scalar d)) (order : Nat) returns (.scalar d) => "series"
+  doc "Compute a realized series expansion to the requested order."
 
 def seriesExpr (expr : SymExpr s (.scalar d)) (x : SymSymbol s (.scalar d))
-    (atPoint : SymExpr s (.scalar d)) (order : Nat) : SymPyM s (SymExpr s (.scalar d)) := do
-  let ref ←
-    applyOpRemoteRef (.scalar d) "series" expr.ref [refArg x.expr, refArg atPoint, toJson order]
-  pure { ref := ref }
+    (atPoint : SymExpr s (.scalar d)) (order : Nat) : SymPyM s (SymExpr s (.scalar d)) :=
+  seriesExprCore expr x atPoint order
 
 end SymbolicLean

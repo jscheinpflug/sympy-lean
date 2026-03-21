@@ -6,7 +6,9 @@
 ## Responsibilities
 - Define arithmetic capability classes for pure terms.
 - Provide operator instances for scalar and matrix arithmetic that stays in the pure layer.
+- Lift the arithmetic surface over declarations so plain-Lean code can write `x + y` and `A * v`.
 - Route scalar mixed-domain `+`, `-`, and `*` through `UnifyDomain`.
+- Route arithmetic smart constructors through the `CoreHead`/`headApp` compatibility layer.
 
 ## Public Surface
 - `CanNeg`
@@ -15,6 +17,7 @@
 - `CanMul`
 - `CanDiv`
 - `CanPow`
+- lifted arithmetic instances for `SymDecl`
 
 ## Change Triggers
 - Pure arithmetic coverage changes.

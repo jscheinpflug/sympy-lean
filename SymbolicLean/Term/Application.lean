@@ -13,4 +13,7 @@ def apply2 (fnTerm : Term (.fn [σ, τ] ret)) (lhs : Term σ) (rhs : Term τ) : 
 instance : CoeFun (Term (.fn [σ] ret)) (fun _ => Term σ → Term ret) where
   coe fnTerm := apply1 fnTerm
 
+instance : CoeFun (FunDecl [σ] ret) (fun _ => Term σ → Term ret) where
+  coe decl := apply1 (decl : Term (.fn [σ] ret))
+
 end SymbolicLean

@@ -5,7 +5,9 @@
 
 ## Responsibilities
 - Define the first effectful algebra operations over realized `SymExpr` values.
+- Register the generated unary algebra wrappers through `declare_op`.
 - Keep substitution typed by pairing source and replacement expressions with an explicit compatibility relation.
+- Register substitution through the same manifest-driven effectful-op path as the other algebra ops.
 - Keep the low-level realized-object entry points separate from the later conversion layer in `Ops/Core`.
 
 ## Public Surface
@@ -15,6 +17,7 @@
 - `factorExpr`
 - `expandExpr`
 - `cancelExpr`
+- `subsExprJson`
 - `subsExpr`
 
 ## Change Triggers

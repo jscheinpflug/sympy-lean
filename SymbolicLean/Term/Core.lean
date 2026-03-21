@@ -1,5 +1,6 @@
 import SymbolicLean.Decl.Core
 import SymbolicLean.Domain.Classes
+import SymbolicLean.Term.HeadBase
 
 namespace SymbolicLean
 
@@ -49,6 +50,7 @@ inductive Term : SSort → Type where
       SymDecl (.scalar d) →
       Term (.scalar d) →
       Term (.scalar d)
+  | headApp : (head : Head schema) → Args schema.args → Term schema.result
   | app : Term (.fn params ret) → Args params → Term ret
 
 end
@@ -60,6 +62,12 @@ def ofDecl (decl : SymDecl σ) : Atom σ := .sym decl
 def ofFun (decl : FunDecl args ret) : Atom (.fn args ret) := .fun_ decl
 
 end Atom
+
+instance : Coe (SymDecl σ) (Term σ) where
+  coe decl := .atom (.sym decl)
+
+instance : Coe (FunDecl args ret) (Term (.fn args ret)) where
+  coe decl := .atom (.fun_ decl)
 
 namespace Args
 

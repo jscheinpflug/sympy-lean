@@ -1,9 +1,12 @@
+import Lean.Data.Json
 import SymbolicLean.Domain.Dim
 import SymbolicLean.Domain.Desc
 import SymbolicLean.Sort.Relations
 import SymbolicLean.Sort.Ext
 
 namespace SymbolicLean
+
+open Lean
 
 inductive SymSort (ext : Type) where
   | boolean
@@ -17,7 +20,7 @@ inductive SymSort (ext : Type) where
   | fn : List (SymSort ext) → SymSort ext → SymSort ext
   | relation : RelKind → List (SymSort ext) → SymSort ext
   | ext : ext → SymSort ext
-  deriving Repr, BEq, Hashable
+  deriving Repr, BEq, Hashable, ToJson, FromJson
 
 noncomputable instance [DecidableEq ext] : DecidableEq (SymSort ext) := by
   classical

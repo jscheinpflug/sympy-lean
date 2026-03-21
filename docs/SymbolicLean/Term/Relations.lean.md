@@ -6,6 +6,7 @@
 ## Responsibilities
 - Define typed comparison helpers for pure terms.
 - Keep relation-building logic separate from arithmetic and boolean helpers.
+- Route comparison and membership helpers through the `CoreHead`/`headApp` compatibility layer.
 
 ## Public Surface
 - `CanCompare`

@@ -1,8 +1,12 @@
+import Lean.Data.Json
+
 namespace SymbolicLean
+
+open Lean
 
 structure VarCtx where
   names : List Lean.Name
-  deriving Repr, DecidableEq, BEq, Hashable
+  deriving Repr, DecidableEq, BEq, Hashable, ToJson, FromJson
 
 namespace VarCtx
 

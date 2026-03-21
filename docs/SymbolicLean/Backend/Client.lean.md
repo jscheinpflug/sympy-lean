@@ -6,6 +6,8 @@
 ## Responsibilities
 - Manage the session-local Python worker process.
 - Send typed requests through the worker and decode typed responses back into Lean values.
+- Verify worker startup metadata, including manifest compatibility.
+- Expose the remote reification request used by `Backend/Realize`.
 
 ## Public Surface
 - `startWorker`
@@ -19,11 +21,13 @@
 - `applyOpRemoteRef`
 - `prettyRemote`
 - `releaseRemote`
+- `reifyRemote`
 
 ## Change Triggers
 - Worker process configuration changes.
 - Session state starts tracking more worker metadata.
 - Realization or ops layers need additional client helpers.
+- Startup compatibility checks or reification payloads change.
 
 ## Related Files
 - [`Decode.lean.md`](Decode.lean.md)
