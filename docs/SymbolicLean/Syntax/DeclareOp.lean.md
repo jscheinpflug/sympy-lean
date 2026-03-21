@@ -8,6 +8,7 @@
 - Generate realized wrappers from compact op declarations, including the current extra-argument compatibility slice.
 - Generate both ref-returning wrappers and JSON-decoding wrappers from the same `declare_op` command family.
 - Register heads and ops in the symbolic environment extension while preserving the existing wrapper surface.
+- Keep the shorthand declaration forms macro-expanded onto the general elaboration paths instead of maintaining duplicate shorthand elaborators.
 - Keep the wrapper-generation scope intentionally narrow to the current realized-wrapper compatibility slice.
 
 ## Public Surface
@@ -22,6 +23,7 @@
 - Generated wrapper shapes grow beyond the current fixed-arity realized operations.
 - Registry metadata starts driving elaboration, manifest generation, or reification.
 - The project starts generating decode-heavy or pure-expression helpers from the same declaration surface.
+- The macro-expanded shorthand forms stop being equivalent to the general elaboration paths.
 - Target-ref extraction or JSON payload decoding rules change.
 
 ## Related Files

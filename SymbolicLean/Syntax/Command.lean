@@ -5,15 +5,27 @@ import SymbolicLean.Syntax.Binders
 
 namespace SymbolicLean
 
-open Lean Elab Macro
+open Lean Elab Term Macro
 
 syntax:lead "sympy " termBeforeDo " do " doSeq : term
 
-macro_rules
-  | `(sympy $d do $seq) =>
-      `(letI : DefaultScalarDomain := { domain := $d };
+private def mkSympyDomainTerm (arg : TSyntax `term) : TermElabM (TSyntax `term) := do
+  let domainTy := Lean.mkConst ``DomainDesc
+  let carrierCandidate ← `(term| carrierDomain $arg)
+  try
+    discard <| elabTerm carrierCandidate (some domainTy)
+    pure carrierCandidate
+  catch _ =>
+    discard <| elabTerm arg (some domainTy)
+    pure arg
+
+elab_rules : term
+  | `(sympy $arg do $seq) => do
+      let domain ← mkSympyDomainTerm arg
+      elabTerm (← `(term|
+        letI : DefaultScalarDomain := { domain := $domain };
         withSession {} fun _s => do
-          $seq)
+          $seq)) none
 
 class ExploreRenderable (s : SessionTok) (α : Type) where
   render : α → SymPyM s String

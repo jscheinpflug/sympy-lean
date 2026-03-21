@@ -3,6 +3,7 @@
 This directory is the repository knowledge base. Agent entrypoint files (`AGENTS.md`, `CLAUDE.md`) are indexes only.
 
 ## Navigation
+- Project guide: [`project-guide.md`](project-guide.md)
 - Architecture and doc contracts: [`architecture.md`](architecture.md)
 - Lean engineering best practices: [`standards/lean-engineering.md`](standards/lean-engineering.md)
 - Lean workflow/tooling contract: [`standards/lean-workflow.md`](standards/lean-workflow.md)
@@ -17,6 +18,7 @@ This directory is the repository knowledge base. Agent entrypoint files (`AGENTS
 - [`SymbolicLean/Examples.lean.md`](SymbolicLean/Examples.lean.md)
 - [`SymbolicLean/Examples/Scalars.lean.md`](SymbolicLean/Examples/Scalars.lean.md)
 - [`SymbolicLean/Examples/Matrices.lean.md`](SymbolicLean/Examples/Matrices.lean.md)
+- [`SymbolicLean/Examples/Proofs.lean.md`](SymbolicLean/Examples/Proofs.lean.md)
 - [`SymbolicLean/Examples/Solvers.lean.md`](SymbolicLean/Examples/Solvers.lean.md)
 - [`SymbolicLean/Examples/Negative.lean.md`](SymbolicLean/Examples/Negative.lean.md)
 - [`SymbolicLean/Backend/Client.lean.md`](SymbolicLean/Backend/Client.lean.md)

@@ -11,12 +11,13 @@
 - `VarCtx`
 - `VarCtx.empty`
 - `VarCtx.ofList`
+- `VarCtx.normalize`
 - `VarCtx.isWellFormed`
 
 ## Change Triggers
 - Polynomial-domain representation changes.
 - Variable-ordering requirements change.
-- Stronger normalization or invariant enforcement is introduced.
+- Stronger normalization or invariant enforcement is introduced or separated from raw construction.
 
 ## Related Files
 - [`Desc.lean.md`](Desc.lean.md)

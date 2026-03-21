@@ -17,6 +17,7 @@ structure WorkerProcess where
 
 structure SessionConfig where
   workerPath : Option System.FilePath := none
+  workerTimeoutMs : UInt32 := 15000
   prettyUnicode : Bool := true
   deriving Repr, Inhabited
 
@@ -33,7 +34,6 @@ structure SessionState where
   declIntern : Std.HashMap DeclKey Ref := {}
   canonicalRefs : Std.HashMap UInt64 Ref := {}
   prettyCache : Std.HashMap Ref String := {}
-  dynamicDims : Std.HashMap Lean.Name Dim := {}
   deriving Inhabited
 
 end SymbolicLean

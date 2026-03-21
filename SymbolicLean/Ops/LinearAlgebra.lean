@@ -44,7 +44,7 @@ private def decodeRRefPayload (payload : Json) : Except SymPyError (Ref × List 
 private def rememberRef (ref : Ref) (sort : SSort) : SymPyM s Unit :=
   modify fun st => { st with liveRefs := st.liveRefs.insert ref sort }
 
-declare_op det {d : DomainDesc} {n : Dim} [DomainCarrier d] [InterpretsCommRing d]
+declare_op detExpr {d : DomainDesc} {n : Dim} [DomainCarrier d] [InterpretsCommRing d]
   for (matrix : SymExpr s (.matrix d n n)) returns (.scalar d) => "det"
   doc "Compute the determinant of a realized square matrix."
 
@@ -56,7 +56,7 @@ declare_op inv {d : DomainDesc} {n : Dim} [DomainCarrier d] [InterpretsField d]
   for (matrix : SymExpr s (.matrix d n n)) returns (.matrix d n n) => "inv"
   doc "Invert a realized square matrix over a field-like domain."
 
-def rref [DomainCarrier d] [InterpretsField d] (matrix : SymExpr s (.matrix d m n)) :
+def rrefExpr [DomainCarrier d] [InterpretsField d] (matrix : SymExpr s (.matrix d m n)) :
     SymPyM s (RRefResult s d m n) := do
   let payload ← liftExcept <| decodeJsonInfo (← applyOpRemote "rref" matrix.ref)
   let (reducedRef, pivots) ← liftExcept <| decodeRRefPayload payload

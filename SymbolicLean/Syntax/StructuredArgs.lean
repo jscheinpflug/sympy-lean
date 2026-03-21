@@ -21,6 +21,16 @@ abbrev BoundRange (d : DomainDesc) := SymDecl (.scalar d) × Term (.scalar d) ×
 abbrev DerivVar (d : DomainDesc) := SymDecl (.scalar d)
 abbrev DerivOrder (d : DomainDesc) := SymDecl (.scalar d) × Nat
 abbrev PieceCase (σ : SSort) := Term σ × Term .boolean
+abbrev PieceDeclCase (σ : SSort) := SymDecl σ × Term .boolean
+
+class IntoBoundSpec (d : DomainDesc) (α : Type) where
+  intoBoundSpec : α → BoundSpec d
+
+class IntoDerivSpec (σ : SSort) (d : DomainDesc) (α : Type) where
+  intoDerivSpec : α → DerivSpec σ d
+
+class IntoPieceBranch (σ : SSort) (α : Type) where
+  intoPieceBranch : α → PieceBranch σ
 
 instance : Coe (BoundVar d) (BoundSpec d) where
   coe var := { var := var }
@@ -39,5 +49,38 @@ instance : Coe (DerivOrder d) (DerivSpec σ d) where
 
 instance : Coe (PieceCase σ) (PieceBranch σ) where
   coe tuple := { body := tuple.1, condition := tuple.2 }
+
+instance : Coe (PieceDeclCase σ) (PieceBranch σ) where
+  coe tuple := { body := tuple.1, condition := tuple.2 }
+
+instance : IntoBoundSpec d (BoundSpec d) where
+  intoBoundSpec := id
+
+instance : IntoBoundSpec d (BoundVar d) where
+  intoBoundSpec := fun value => (value : BoundSpec d)
+
+instance : IntoBoundSpec d (BoundUpper d) where
+  intoBoundSpec := fun value => (value : BoundSpec d)
+
+instance : IntoBoundSpec d (BoundRange d) where
+  intoBoundSpec := fun value => (value : BoundSpec d)
+
+instance : IntoDerivSpec σ d (DerivSpec σ d) where
+  intoDerivSpec := id
+
+instance : IntoDerivSpec σ d (DerivVar d) where
+  intoDerivSpec := fun value => (value : DerivSpec σ d)
+
+instance : IntoDerivSpec σ d (DerivOrder d) where
+  intoDerivSpec := fun value => (value : DerivSpec σ d)
+
+instance : IntoPieceBranch σ (PieceBranch σ) where
+  intoPieceBranch := id
+
+instance : IntoPieceBranch σ (PieceCase σ) where
+  intoPieceBranch := fun value => (value : PieceBranch σ)
+
+instance : IntoPieceBranch σ (PieceDeclCase σ) where
+  intoPieceBranch := fun value => (value : PieceBranch σ)
 
 end SymbolicLean

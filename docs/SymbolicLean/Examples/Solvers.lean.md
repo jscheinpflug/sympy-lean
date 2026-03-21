@@ -7,10 +7,11 @@
 - Demonstrate the main solver-facing workflows over the carrier-based plain-Lean front door.
 - Smoke-test the `SymPy` namespace aliases that feed into solver-oriented workflows.
 - Smoke-test solver field notation on the public front door.
+- Smoke-test `sympy Rat do` on effectful solver workflows.
 - Smoke-test scoped assumptions through ordinary Lean `assuming [...] do ...`.
 
 ## Public Surface
-- Executable examples for `solveUnivariate`, `solveset`, `dsolve`, `satisfiable`, and `ask`, including `SymPy.Derivative`, `SymPy.S.true_`, `SymPy.Q.positive`, solver field notation such as `.solveUnivariate`, `.satisfiable`, and `.ask`, and scoped assumptions via `assuming [...] do ...`.
+- Executable examples for `solveUnivariate`, `solveset`, `dsolve`, `satisfiable`, and `ask`, including `sympy Rat do`, `SymPy.Derivative`, `SymPy.S.true_`, `SymPy.Q.positive`, the `pretty` helper, solver field notation such as `.solveUnivariate`, `.satisfiable`, and `.ask`, and scoped assumptions via `assuming [...] do ...`.
 
 ## Change Triggers
 - Solver result containers change.

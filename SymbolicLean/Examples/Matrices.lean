@@ -12,19 +12,17 @@ example : Term (Vec Rat 2) :=
   let result ← withSession {} fun _s => do
     symbols (A : Mat Rat 2 2) (v : Vec Rat 2)
     let product : Term (Vec Rat 2) := A * v
-    let realized ← eval product
-    prettyRemote realized.ref
+    pretty product
   match result with
   | .ok text => IO.println text
   | .error err => IO.println (repr err)
 
--- Determinant on a realized symbolic matrix.
+-- Determinant now goes through the public matrix front door.
 #eval do
   let result ← withSession {} fun _s => do
     symbols (A : Mat Rat 2 2)
-    let matrix ← realizeDecl A
-    let determinant ← det matrix.expr
-    prettyRemote determinant.ref
+    let determinant ← det A
+    pretty determinant
   match result with
   | .ok text => IO.println text
   | .error err => IO.println (repr err)
@@ -34,7 +32,18 @@ example : Term (Vec Rat 2) :=
   let result ← withSession {} fun _s => do
     symbols (A : Mat Rat 2 2)
     let inverse ← A.I
-    prettyRemote inverse.ref
+    pretty inverse
+  match result with
+  | .ok text => IO.println text
+  | .error err => IO.println (repr err)
+
+-- Row-reduction also goes through the public front door.
+#eval do
+  let result ← withSession {} fun _s => do
+    symbols (A : Mat Rat 2 2)
+    let reduced ← rref A
+    let text ← pretty reduced.reduced
+    pure s!"{text} pivots={reduced.pivots}"
   match result with
   | .ok text => IO.println text
   | .error err => IO.println (repr err)

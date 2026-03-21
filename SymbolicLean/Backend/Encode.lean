@@ -86,27 +86,26 @@ partial def encodeTerm : Term σ → Json
   | .intLit value => withSort "intLit" σ [("value", toJson value)]
   | .ratLit value =>
       withSort "ratLit" σ [("num", toJson value.num), ("den", toJson value.den)]
-  | .headApp head args => encodeHeadApp head args
   | @Term.scalarAdd d1 d2 out _ lhs rhs =>
       encodeHeadApp (.core (.scalarAdd d1 d2 out)) (.pair lhs rhs)
   | @Term.scalarSub d1 d2 out _ lhs rhs =>
       encodeHeadApp (.core (.scalarSub d1 d2 out)) (.pair lhs rhs)
   | @Term.scalarMul d1 d2 out _ lhs rhs =>
       encodeHeadApp (.core (.scalarMul d1 d2 out)) (.pair lhs rhs)
-  | .scalarNeg arg => encodeHeadApp (.core (.scalarNeg _)) (.singleton arg)
-  | .scalarDiv lhs rhs => encodeHeadApp (.core (.scalarDiv _)) (.pair lhs rhs)
-  | .scalarPow lhs rhs => encodeHeadApp (.core (.scalarPow _)) (.pair lhs rhs)
-  | .matrixAdd lhs rhs => encodeHeadApp (.core (.matrixAdd _ _ _)) (.pair lhs rhs)
-  | .matrixSub lhs rhs => encodeHeadApp (.core (.matrixSub _ _ _)) (.pair lhs rhs)
-  | .matrixMul lhs rhs => encodeHeadApp (.core (.matrixMul _ _ _ _)) (.pair lhs rhs)
-  | .truth value => encodeHeadApp (.core (.truth value)) .nil
-  | .not_ arg => encodeHeadApp (.core .not_) (.singleton arg)
-  | .and_ lhs rhs => encodeHeadApp (.core .and_) (.pair lhs rhs)
-  | .or_ lhs rhs => encodeHeadApp (.core .or_) (.pair lhs rhs)
-  | .implies lhs rhs => encodeHeadApp (.core .implies) (.pair lhs rhs)
-  | .iff lhs rhs => encodeHeadApp (.core .iff) (.pair lhs rhs)
-  | .relation rel lhs rhs => encodeHeadApp (.core (.relation rel _ _)) (.pair lhs rhs)
-  | .membership elem setTerm => encodeHeadApp (.core (.mem _)) (.pair elem setTerm)
+  | @Term.scalarNeg d arg => encodeHeadApp (.core (.scalarNeg d)) (.singleton arg)
+  | @Term.scalarDiv d lhs rhs => encodeHeadApp (.core (.scalarDiv d)) (.pair lhs rhs)
+  | @Term.scalarPow d lhs rhs => encodeHeadApp (.core (.scalarPow d)) (.pair lhs rhs)
+  | @Term.matrixAdd d m n lhs rhs => encodeHeadApp (.core (.matrixAdd d m n)) (.pair lhs rhs)
+  | @Term.matrixSub d m n lhs rhs => encodeHeadApp (.core (.matrixSub d m n)) (.pair lhs rhs)
+  | @Term.matrixMul d m n p lhs rhs => encodeHeadApp (.core (.matrixMul d m n p)) (.pair lhs rhs)
+  | Term.truth value => encodeHeadApp (.core (.truth value)) .nil
+  | Term.not_ arg => encodeHeadApp (.core .not_) (.singleton arg)
+  | Term.and_ lhs rhs => encodeHeadApp (.core .and_) (.pair lhs rhs)
+  | Term.or_ lhs rhs => encodeHeadApp (.core .or_) (.pair lhs rhs)
+  | Term.implies lhs rhs => encodeHeadApp (.core .implies) (.pair lhs rhs)
+  | Term.iff lhs rhs => encodeHeadApp (.core .iff) (.pair lhs rhs)
+  | @Term.relation σ τ rel lhs rhs => encodeHeadApp (.core (.relation rel σ τ)) (.pair lhs rhs)
+  | @Term.membership σ elem setTerm => encodeHeadApp (.core (.mem σ)) (.pair elem setTerm)
   | @Term.diff σ d body var order =>
       encodeHeadApp (.ext (diffHeadSpec σ d))
         (.cons body (.cons (var : Term (.scalar d)) (.cons (.natLit order) .nil)))
@@ -115,6 +114,7 @@ partial def encodeTerm : Term σ → Json
   | @Term.limit d body var value =>
       encodeHeadApp (.ext (limitHeadSpec d))
         (.cons body (.cons (var : Term (.scalar d)) (.cons value .nil)))
+  | .headApp head args => encodeHeadApp head args
   | .app fn args =>
       withSort "app" σ [("fn", encodeTerm fn), ("args", toJson (encodeArgs args))]
 

@@ -6,6 +6,7 @@
 ## Responsibilities
 - Manage the session-local Python worker process.
 - Send typed requests through the worker and decode typed responses back into Lean values.
+- Enforce request/read timeouts and reset stale remote caches when the worker dies or times out.
 - Verify worker startup metadata, including manifest compatibility.
 - Expose the remote reification request used by `Backend/Realize`.
 
@@ -25,7 +26,7 @@
 
 ## Change Triggers
 - Worker process configuration changes.
-- Session state starts tracking more worker metadata.
+- Session timeout or worker-reset policy changes.
 - Realization or ops layers need additional client helpers.
 - Startup compatibility checks or reification payloads change.
 

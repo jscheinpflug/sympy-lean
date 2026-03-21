@@ -20,6 +20,11 @@
 - Pure declaration builders now expose `sym`, `symWith`, and `funSym`.
 - Binder sugar accepts public carrier and matrix annotations such as `symbols (x : Rat | positive)` and `symbols (A : Mat Rat 2 2)`.
 - Plain-Lean declaration ergonomics now cover `x + y`, `f x`, and `A * v` through declaration-to-term coercions and lifted operator/function instances.
+- Public alias-head numerals now cover `Scalar Int` and `Scalar Rat`.
+- Structured front-door builders now accept simpler tuple/decl inputs through dedicated conversion typeclasses.
+- The `SymPy` namespace now covers bounded `Integral`, `Sum`, `Product`, and `Piecewise` forms on the same front door.
+- Public matrix helpers now include `det`, `rref`, and `pretty` alongside the earlier `T` and `I` wrappers.
+- Session syntax now accepts either `sympy d do ...` or `sympy α do ...`.
 - The public scalar, matrix, and solver examples now use the carrier-based surface instead of the older internal sort/domain spellings.
 - The typed head compatibility layer now exists in `SymbolicLean/Term/Head.lean`.
 - Internal normalization now goes through `Term.coreView` and first projector helpers in `SymbolicLean/Term/View.lean`.

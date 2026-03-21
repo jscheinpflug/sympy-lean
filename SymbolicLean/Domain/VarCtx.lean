@@ -12,7 +12,9 @@ namespace VarCtx
 
 def empty : VarCtx := ⟨[]⟩
 
-def ofList (names : List Lean.Name) : VarCtx := ⟨names.eraseDups⟩
+def ofList (names : List Lean.Name) : VarCtx := ⟨names⟩
+
+def normalize (ctx : VarCtx) : VarCtx := ⟨ctx.names.eraseDups⟩
 
 def isWellFormed (ctx : VarCtx) : Prop := ctx.names.Nodup
 

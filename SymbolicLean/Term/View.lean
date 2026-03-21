@@ -1,4 +1,4 @@
-import SymbolicLean.Term.Head
+import SymbolicLean.Term.Structured
 
 namespace SymbolicLean
 
@@ -13,6 +13,17 @@ structure IntegralView where
   body : Term (.scalar domain)
   var : SymDecl (.scalar domain)
 
+structure PiecewiseView (σ : SSort) where
+  branch : PieceBranch σ
+  fallback : Term σ
+
+inductive PackedTerm where
+  | mk (σ : SSort) (term : Term σ)
+
+def Args.toPackedList : Args σs → List PackedTerm
+  | .nil => []
+  | .cons head tail => .mk _ head :: toPackedList tail
+
 inductive CoreView : SSort → Type where
   | atom : Atom σ → CoreView σ
   | natLit : Nat → CoreView (.scalar (.ground .ZZ))
@@ -26,60 +37,36 @@ inductive CoreView : SSort → Type where
 
 namespace Term
 
-def coreView (term : Term σ) : CoreView σ := by
-  cases term with
-  | atom atom =>
-      exact CoreView.atom atom
-  | natLit value =>
-      exact CoreView.natLit value
-  | intLit value =>
-      exact CoreView.intLit value
-  | ratLit value =>
-      exact CoreView.ratLit value
-  | scalarNeg arg =>
-      exact CoreView.head (.core (.scalarNeg _)) (.singleton arg)
-  | scalarAdd lhs rhs =>
-      exact CoreView.head (.core (@CoreHead.scalarAdd _ _ _ inferInstance)) (.pair lhs rhs)
-  | scalarSub lhs rhs =>
-      exact CoreView.head (.core (@CoreHead.scalarSub _ _ _ inferInstance)) (.pair lhs rhs)
-  | scalarMul lhs rhs =>
-      exact CoreView.head (.core (@CoreHead.scalarMul _ _ _ inferInstance)) (.pair lhs rhs)
-  | scalarDiv lhs rhs =>
-      exact CoreView.head (.core (.scalarDiv _)) (.pair lhs rhs)
-  | scalarPow lhs rhs =>
-      exact CoreView.head (.core (.scalarPow _)) (.pair lhs rhs)
-  | matrixAdd lhs rhs =>
-      exact CoreView.head (.core (.matrixAdd _ _ _)) (.pair lhs rhs)
-  | matrixSub lhs rhs =>
-      exact CoreView.head (.core (.matrixSub _ _ _)) (.pair lhs rhs)
-  | matrixMul lhs rhs =>
-      exact CoreView.head (.core (.matrixMul _ _ _ _)) (.pair lhs rhs)
-  | truth value =>
-      exact CoreView.head (.core (.truth value)) .nil
-  | not_ arg =>
-      exact CoreView.head (.core .not_) (.singleton arg)
-  | and_ lhs rhs =>
-      exact CoreView.head (.core .and_) (.pair lhs rhs)
-  | or_ lhs rhs =>
-      exact CoreView.head (.core .or_) (.pair lhs rhs)
-  | implies lhs rhs =>
-      exact CoreView.head (.core .implies) (.pair lhs rhs)
-  | iff lhs rhs =>
-      exact CoreView.head (.core .iff) (.pair lhs rhs)
-  | relation rel lhs rhs =>
-      exact CoreView.head (.core (.relation rel _ _)) (.pair lhs rhs)
-  | membership elem setTerm =>
-      exact CoreView.head (.core (.mem _)) (.pair elem setTerm)
-  | diff body var order =>
-      exact CoreView.diff body var order
-  | integral body var =>
-      exact CoreView.integral body var
-  | limit body var value =>
-      exact CoreView.limit body var value
-  | headApp head args =>
-      exact CoreView.head head args
-  | app fn args =>
-      exact CoreView.app fn args
+def coreView (term : Term σ) : CoreView σ :=
+  Term.casesOn
+    (motive_2 := fun σ _ => CoreView σ)
+    term
+    (fun atom => CoreView.atom atom)
+    (fun value => CoreView.natLit value)
+    (fun value => CoreView.intLit value)
+    (fun value => CoreView.ratLit value)
+    (fun {d} arg => CoreView.head (.core (.scalarNeg d)) (.singleton arg))
+    (fun {d1} {d2} {out} _ lhs rhs => CoreView.head (.core (.scalarAdd d1 d2 out)) (.pair lhs rhs))
+    (fun {d1} {d2} {out} _ lhs rhs => CoreView.head (.core (.scalarSub d1 d2 out)) (.pair lhs rhs))
+    (fun {d1} {d2} {out} _ lhs rhs => CoreView.head (.core (.scalarMul d1 d2 out)) (.pair lhs rhs))
+    (fun {d} lhs rhs => CoreView.head (.core (.scalarDiv d)) (.pair lhs rhs))
+    (fun {d} lhs rhs => CoreView.head (.core (.scalarPow d)) (.pair lhs rhs))
+    (fun {d} {m} {n} lhs rhs => CoreView.head (.core (.matrixAdd d m n)) (.pair lhs rhs))
+    (fun {d} {m} {n} lhs rhs => CoreView.head (.core (.matrixSub d m n)) (.pair lhs rhs))
+    (fun {d} {m} {n} {p} lhs rhs => CoreView.head (.core (.matrixMul d m n p)) (.pair lhs rhs))
+    (fun value => CoreView.head (.core (.truth value)) .nil)
+    (fun arg => CoreView.head (.core .not_) (.singleton arg))
+    (fun lhs rhs => CoreView.head (.core .and_) (.pair lhs rhs))
+    (fun lhs rhs => CoreView.head (.core .or_) (.pair lhs rhs))
+    (fun lhs rhs => CoreView.head (.core .implies) (.pair lhs rhs))
+    (fun lhs rhs => CoreView.head (.core .iff) (.pair lhs rhs))
+    (fun {σ} {τ} rel lhs rhs => CoreView.head (.core (.relation rel σ τ)) (.pair lhs rhs))
+    (fun {σ} elem setTerm => CoreView.head (.core (.mem σ)) (.pair elem setTerm))
+    (fun {_} {_} body var order => CoreView.diff body var order)
+    (fun {_} body var => CoreView.integral body var)
+    (fun {_} body var value => CoreView.limit body var value)
+    (fun head args => CoreView.head head args)
+    (fun fn args => CoreView.app fn args)
 
 def asAdd? (term : Term σ) : Option BinaryView :=
   match term.coreView with
@@ -94,8 +81,64 @@ def asIntegral? (term : Term σ) : Option IntegralView :=
   | .integral body var => some { domain := _, body := body, var := var }
   | _ => none
 
-def asPiecewise? (_term : Term σ) : Option PUnit :=
-  none
+private def castTerm {σ τ : SSort} (h : σ = τ) (term : Term σ) : Term τ :=
+  h ▸ term
+
+private noncomputable def asPiecewiseFromPacked (sort : SSort) (headName : Lean.Name)
+    (args : List PackedTerm) : Option (PiecewiseView sort) :=
+  match args with
+  | [.mk bodySort body, .mk .boolean condition, .mk fallbackSort fallback] =>
+      if hBody : bodySort = sort then
+        if hFallback : fallbackSort = sort then
+          let body' : Term sort := castTerm hBody body
+          let fallback' : Term sort := castTerm hFallback fallback
+          if headName = piecewiseHeadName then
+            some { branch := { body := body', condition := condition }, fallback := fallback' }
+          else
+            none
+        else
+          none
+      else
+        none
+  | _ => none
+
+private noncomputable def asPiecewiseOf (sort : SSort) (term : Term sort) :
+    Option (PiecewiseView sort) :=
+  Term.casesOn
+    (motive_2 := fun σ _ => Option (PiecewiseView σ))
+    term
+    (fun {_} _ => none)
+    (fun _ => none)
+    (fun _ => none)
+    (fun _ => none)
+    (fun {_} _ => none)
+    (fun {_} {_} {_} {_} _ _ => none)
+    (fun {_} {_} {_} {_} _ _ => none)
+    (fun {_} {_} {_} {_} _ _ => none)
+    (fun {_} _ _ => none)
+    (fun {_} _ _ => none)
+    (fun {_} {_} {_} _ _ => none)
+    (fun {_} {_} {_} _ _ => none)
+    (fun {_} {_} {_} {_} _ _ => none)
+    (fun _ => none)
+    (fun _ => none)
+    (fun _ _ => none)
+    (fun _ _ => none)
+    (fun _ _ => none)
+    (fun _ _ => none)
+    (fun {_} {_} _ _ _ => none)
+    (fun {_} _ _ => none)
+    (fun {_} {_} _ _ _ => none)
+    (fun {_} _ _ => none)
+    (fun {_} _ _ _ => none)
+    (fun {_} head args =>
+      match head with
+      | .ext spec => asPiecewiseFromPacked _ spec.name args.toPackedList
+      | .core _ => none)
+    (fun {_} {_} _ _ => none)
+
+noncomputable def asPiecewise? {σ : SSort} (term : Term σ) : Option (PiecewiseView σ) :=
+  asPiecewiseOf σ term
 
 end Term
 

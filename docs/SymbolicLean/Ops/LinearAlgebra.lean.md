@@ -5,19 +5,20 @@
 
 ## Responsibilities
 - Define the first effectful linear-algebra operations over realized matrix expressions.
-- Use `declare_op` for the direct ref-returning matrix ops.
+- Keep the realized-only matrix ops separate from the broader front-door wrappers exported elsewhere.
 - Enforce the field-only matrix constraints for inversion and row reduction at the Lean type level.
 - Decode SymPy's structured `rref` result into a typed Lean container.
 
 ## Public Surface
 - `RRefResult`
-- `det`
+- `detExpr`
 - `inv`
-- `rref`
+- `rrefExpr`
 
 ## Change Triggers
 - Matrix realization changes.
 - Worker payloads for structured matrix operations change.
+- The split between raw realized-only names and public front-door wrappers changes.
 - Additional matrix operations or result containers are added.
 
 ## Related Files

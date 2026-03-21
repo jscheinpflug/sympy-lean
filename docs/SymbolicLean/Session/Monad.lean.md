@@ -5,7 +5,7 @@
 
 ## Responsibilities
 - Define the session monad stack for effectful symbolic work.
-- Provide the `withSession` entrypoint used to scope runtime handles.
+- Provide the `withSession` entrypoint used to scope runtime handles and mint a fresh session token.
 
 ## Public Surface
 - `SymPyM`

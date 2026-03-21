@@ -4,7 +4,7 @@
 - [`../../../SymbolicLean/Syntax/Command.lean`](../../../SymbolicLean/Syntax/Command.lean)
 
 ## Responsibilities
-- Define the session-opening `sympy d do ...` syntax.
+- Define the session-opening `sympy ... do ...` syntax over either a domain term or a carrier type.
 - Install the v1 default scalar domain for binder sugar through `DefaultScalarDomain`.
 - Define the exploratory `#sympy α => expr` and `#sympy α do ...` commands over ordinary Lean syntax.
 - Auto-create simple scalar symbols and unary scalar functions for the command-level exploration path.
@@ -13,6 +13,7 @@
 
 ## Public Surface
 - `sympy d do ...`
+- `sympy α do ...`
 - `#sympy α => expr`
 - `#sympy α do ...`
 

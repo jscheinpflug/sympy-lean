@@ -3,8 +3,10 @@ import SymbolicLean.Ops.Algebra
 import SymbolicLean.Ops.Calculus
 import SymbolicLean.Ops.LinearAlgebra
 import SymbolicLean.Ops.Solvers
+import SymbolicLean.Syntax.StructuredArgs
 import SymbolicLean.Term.Calculus
 import SymbolicLean.Term.Logic
+import SymbolicLean.Term.Structured
 
 namespace SymbolicLean
 
@@ -32,6 +34,35 @@ private def elabGeneratedConstDef
   elabCommand <| ← `(command|
     def $declIdent : $retTy := $body)
 
+private def findSessionTokIdent? (binders : Array Syntax) : Option (TSyntax `ident) :=
+  binders.findSome? fun binder =>
+    match binder with
+    | `(bracketedBinder| {$id:ident : SessionTok}) => some id
+    | `(bracketedBinder| ($id:ident : SessionTok)) => some id
+    | _ => none
+
+private def mkReceiverArgTy (ns : Name) (sessionId? : Option (TSyntax `ident))
+    (sortTy : TSyntax `term) : CommandElabM (TSyntax `term) := do
+  match ns with
+  | `Term => `(term| SymbolicLean.Term $sortTy)
+  | `SymExpr =>
+      let sessionId := sessionId?.getD (mkIdent `s)
+      `(term| SymbolicLean.SymExpr $sessionId $sortTy)
+  | `SymDecl => `(term| SymbolicLean.SymDecl $sortTy)
+  | _ => throwError "unsupported generated receiver namespace {ns}"
+
+private def elabGeneratedReceiverDefs
+    (namespaces : Array Name)
+    (binders : Array Syntax)
+    (name arg : TSyntax `ident)
+    (sortTy : TSyntax `term)
+    (extraBinders : Array Syntax)
+    (retTy body : TSyntax `term) : CommandElabM Unit := do
+  let sessionId? := findSessionTokIdent? binders
+  for ns in namespaces do
+    let argTy ← mkReceiverArgTy ns sessionId? sortTy
+    elabGeneratedReceiverDef ns binders name arg extraBinders argTy retTy body
+
 syntax "generate_term_method " ident bracketedBinder* " for " "(" ident " : " term ")" bracketedBinder*
   " returns " term
   " => " term : command
@@ -46,6 +77,14 @@ syntax "generate_sympy_alias " ident bracketedBinder* " for " "(" ident " : " te
   " => " term : command
 syntax "generate_sympy_q_const " ident " returns " term " => " term : command
 syntax "generate_sympy_s_const " ident " returns " term " => " term : command
+syntax "generate_term_symexpr_methods " ident bracketedBinder*
+  " for " "(" ident " : " term ")" bracketedBinder*
+  " returns " term
+  " => " term : command
+syntax "generate_term_symexpr_symdecl_methods " ident bracketedBinder*
+  " for " "(" ident " : " term ")" bracketedBinder*
+  " returns " term
+  " => " term : command
 
 elab_rules : command
   | `(generate_term_method $name $binders* for ($arg : $argTy) $extraBinders* returns $retTy => $body) =>
@@ -60,6 +99,12 @@ elab_rules : command
       elabGeneratedConstDef `SymPy.Q name retTy body
   | `(generate_sympy_s_const $name returns $retTy => $body) =>
       elabGeneratedConstDef `SymPy.S name retTy body
+  | `(generate_term_symexpr_methods $name $binders* for ($arg : $sortTy) $extraBinders* returns $retTy => $body) =>
+      elabGeneratedReceiverDefs #[`Term, `SymExpr] (binders.map (·.raw)) name arg sortTy
+        (extraBinders.map (·.raw)) retTy body
+  | `(generate_term_symexpr_symdecl_methods $name $binders* for ($arg : $sortTy) $extraBinders* returns $retTy => $body) =>
+      elabGeneratedReceiverDefs #[`Term, `SymExpr, `SymDecl] (binders.map (·.raw)) name arg sortTy
+        (extraBinders.map (·.raw)) retTy body
 
 class IntoSymExpr (s : SessionTok) (α : Type) (σ : outParam SSort) where
   intoSymExpr : α → SymPyM s (SymExpr s σ)
@@ -113,6 +158,9 @@ def expand [IntoSymExpr s α σ] (expr : α) : SymPyM s (SymExpr s σ) := do
 def cancel [IntoSymExpr s α σ] (expr : α) : SymPyM s (SymExpr s σ) := do
   cancelExpr (← IntoSymExpr.intoSymExpr expr)
 
+def pretty [IntoSymExpr s α σ] (expr : α) : SymPyM s String := do
+  prettyRemote (← IntoSymExpr.intoSymExpr expr).ref
+
 def substPair [IntoSymExpr s α σ] [IntoSymExpr s β τ] [SubstCompat σ τ]
     (fromExpr : α) (toExpr : β) : SymPyM s (SubstPair s) := do
   pure
@@ -160,92 +208,63 @@ def I [IntoSymExpr s α (.matrix d n n)] [DomainCarrier d] [InterpretsField d] (
     SymPyM s (SymExpr s (.matrix d n n)) := do
   inv (← IntoSymExpr.intoSymExpr matrix)
 
-generate_term_method simplify {s : SessionTok} {σ : SSort} for (expr : SymbolicLean.Term σ)
+def det [IntoSymExpr s α (.matrix d n n)] [DomainCarrier d] [InterpretsCommRing d] (matrix : α) :
+    SymPyM s (SymExpr s (.scalar d)) := do
+  detExpr (← IntoSymExpr.intoSymExpr matrix)
+
+def rref [IntoSymExpr s α (.matrix d m n)] [DomainCarrier d] [InterpretsField d] (matrix : α) :
+    SymPyM s (RRefResult s d m n) := do
+  rrefExpr (← IntoSymExpr.intoSymExpr matrix)
+
+generate_term_symexpr_symdecl_methods pretty {s : SessionTok} {σ : SSort} for (expr : σ)
+  returns SymPyM s String => SymbolicLean.pretty expr
+
+generate_term_symexpr_methods simplify {s : SessionTok} {σ : SSort} for (expr : σ)
   returns SymPyM s (SymExpr s σ) => SymbolicLean.simplify expr
 
-generate_term_method factor {s : SessionTok} {σ : SSort} for (expr : SymbolicLean.Term σ)
+generate_term_symexpr_methods factor {s : SessionTok} {σ : SSort} for (expr : σ)
   returns SymPyM s (SymExpr s σ) => SymbolicLean.factor expr
 
-generate_term_method expand {s : SessionTok} {σ : SSort} for (expr : SymbolicLean.Term σ)
+generate_term_symexpr_methods expand {s : SessionTok} {σ : SSort} for (expr : σ)
   returns SymPyM s (SymExpr s σ) => SymbolicLean.expand expr
 
-generate_term_method cancel {s : SessionTok} {σ : SSort} for (expr : SymbolicLean.Term σ)
+generate_term_symexpr_methods cancel {s : SessionTok} {σ : SSort} for (expr : σ)
   returns SymPyM s (SymExpr s σ) => SymbolicLean.cancel expr
 
-generate_term_method T {s : SessionTok} {d : DomainDesc} {m n : Dim} [DomainCarrier d]
-  for (matrix : SymbolicLean.Term (.matrix d m n))
+generate_term_symexpr_symdecl_methods T {s : SessionTok} {d : DomainDesc} {m n : Dim} [DomainCarrier d]
+  for (matrix : (.matrix d m n))
   returns SymPyM s (SymExpr s (.matrix d n m)) => SymbolicLean.T matrix
 
-generate_term_method I {s : SessionTok} {d : DomainDesc} {n : Dim}
-  [DomainCarrier d] [InterpretsField d] for (matrix : SymbolicLean.Term (.matrix d n n))
+generate_term_symexpr_symdecl_methods I {s : SessionTok} {d : DomainDesc} {n : Dim}
+  [DomainCarrier d] [InterpretsField d] for (matrix : (.matrix d n n))
   returns SymPyM s (SymExpr s (.matrix d n n)) => SymbolicLean.I matrix
 
-generate_term_method subs {s : SessionTok} {σ : SSort} for (expr : SymbolicLean.Term σ)
+generate_term_symexpr_symdecl_methods det {s : SessionTok} {d : DomainDesc} {n : Dim}
+  [DomainCarrier d] [InterpretsCommRing d] for (matrix : (.matrix d n n))
+  returns SymPyM s (SymExpr s (.scalar d)) => SymbolicLean.det matrix
+
+generate_term_symexpr_symdecl_methods rref {s : SessionTok} {d : DomainDesc} {m n : Dim}
+  [DomainCarrier d] [InterpretsField d] for (matrix : (.matrix d m n))
+  returns SymPyM s (RRefResult s d m n) => SymbolicLean.rref matrix
+
+generate_term_symexpr_methods subs {s : SessionTok} {σ : SSort} for (expr : σ)
   (pairs : List (SymPyM s (SubstPair s))) returns SymPyM s (SymExpr s σ) =>
     SymbolicLean.subs expr pairs
 
-generate_term_method solveUnivariate {s : SessionTok} {d : DomainDesc} {β : Type}
-  [IntoSymSymbol s β (.scalar d)] for (expr : SymbolicLean.Term (.scalar d)) (x : β)
+generate_term_symexpr_methods solveUnivariate {s : SessionTok} {d : DomainDesc} {β : Type}
+  [IntoSymSymbol s β (.scalar d)] for (expr : (.scalar d)) (x : β)
   returns SymPyM s (FiniteSolve s (.scalar d)) => SymbolicLean.solveUnivariate expr x
 
-generate_term_method solveset {s : SessionTok} {d : DomainDesc} {β : Type}
-  [IntoSymSymbol s β (.scalar d)] for (expr : SymbolicLean.Term (.scalar d)) (x : β)
+generate_term_symexpr_methods solveset {s : SessionTok} {d : DomainDesc} {β : Type}
+  [IntoSymSymbol s β (.scalar d)] for (expr : (.scalar d)) (x : β)
   returns SymPyM s (SolveSetResult s (.scalar d)) => SymbolicLean.solveset expr x
 
-generate_term_method dsolve {s : SessionTok} {β : Type} {args : List SSort} {ret : SSort}
-  [IntoSymFun s β args ret] for (ode : SymbolicLean.Term .boolean) (f : β)
+generate_term_symexpr_methods dsolve {s : SessionTok} {β : Type} {args : List SSort} {ret : SSort}
+  [IntoSymFun s β args ret] for (ode : .boolean) (f : β)
   returns SymPyM s (ODESolution s) => SymbolicLean.dsolve ode f
 
-generate_term_method satisfiable {s : SessionTok} for (formula : SymbolicLean.Term .boolean)
+generate_term_symexpr_methods satisfiable {s : SessionTok} for (formula : .boolean)
   returns SymPyM s SatisfiableResult => SymbolicLean.satisfiable formula
-
-generate_symexpr_method simplify {s : SessionTok} {σ : SSort} for (expr : SymbolicLean.SymExpr s σ)
-  returns SymPyM s (SymExpr s σ) => SymbolicLean.simplify expr
-
-generate_symexpr_method factor {s : SessionTok} {σ : SSort} for (expr : SymbolicLean.SymExpr s σ)
-  returns SymPyM s (SymExpr s σ) => SymbolicLean.factor expr
-
-generate_symexpr_method expand {s : SessionTok} {σ : SSort} for (expr : SymbolicLean.SymExpr s σ)
-  returns SymPyM s (SymExpr s σ) => SymbolicLean.expand expr
-
-generate_symexpr_method cancel {s : SessionTok} {σ : SSort} for (expr : SymbolicLean.SymExpr s σ)
-  returns SymPyM s (SymExpr s σ) => SymbolicLean.cancel expr
-
-generate_symexpr_method T {s : SessionTok} {d : DomainDesc} {m n : Dim} [DomainCarrier d]
-  for (matrix : SymbolicLean.SymExpr s (.matrix d m n))
-  returns SymPyM s (SymExpr s (.matrix d n m)) => SymbolicLean.T matrix
-
-generate_symexpr_method I {s : SessionTok} {d : DomainDesc} {n : Dim}
-  [DomainCarrier d] [InterpretsField d] for (matrix : SymbolicLean.SymExpr s (.matrix d n n))
-  returns SymPyM s (SymExpr s (.matrix d n n)) => SymbolicLean.I matrix
-
-generate_symexpr_method subs {s : SessionTok} {σ : SSort} for (expr : SymbolicLean.SymExpr s σ)
-  (pairs : List (SymPyM s (SubstPair s))) returns SymPyM s (SymExpr s σ) =>
-    SymbolicLean.subs expr pairs
-
-generate_symexpr_method solveUnivariate {s : SessionTok} {d : DomainDesc} {β : Type}
-  [IntoSymSymbol s β (.scalar d)] for (expr : SymbolicLean.SymExpr s (.scalar d)) (x : β)
-  returns SymPyM s (FiniteSolve s (.scalar d)) => SymbolicLean.solveUnivariate expr x
-
-generate_symexpr_method solveset {s : SessionTok} {d : DomainDesc} {β : Type}
-  [IntoSymSymbol s β (.scalar d)] for (expr : SymbolicLean.SymExpr s (.scalar d)) (x : β)
-  returns SymPyM s (SolveSetResult s (.scalar d)) => SymbolicLean.solveset expr x
-
-generate_symexpr_method dsolve {s : SessionTok} {β : Type} {args : List SSort} {ret : SSort}
-  [IntoSymFun s β args ret] for (ode : SymbolicLean.SymExpr s .boolean) (f : β)
-  returns SymPyM s (ODESolution s) => SymbolicLean.dsolve ode f
-
-generate_symexpr_method satisfiable {s : SessionTok}
-  for (formula : SymbolicLean.SymExpr s .boolean)
-  returns SymPyM s SatisfiableResult => SymbolicLean.satisfiable formula
-
-generate_symdecl_method T {s : SessionTok} {d : DomainDesc} {m n : Dim} [DomainCarrier d]
-  for (matrix : SymbolicLean.SymDecl (.matrix d m n))
-  returns SymPyM s (SymExpr s (.matrix d n m)) => SymbolicLean.T matrix
-
-generate_symdecl_method I {s : SessionTok} {d : DomainDesc} {n : Dim}
-  [DomainCarrier d] [InterpretsField d] for (matrix : SymbolicLean.SymDecl (.matrix d n n))
-  returns SymPyM s (SymExpr s (.matrix d n n)) => SymbolicLean.I matrix
 
 generate_symdecl_method ask {s : SessionTok} {d : DomainDesc}
   for (symbol : SymbolicLean.SymDecl (.scalar d)) (query : Assumption)
@@ -267,6 +286,10 @@ generate_sympy_alias cancel {s : SessionTok} {α : Type} {σ : SSort} [IntoSymEx
   for (expr : α)
   returns SymPyM s (SymExpr s σ) => SymbolicLean.cancel expr
 
+generate_sympy_alias pretty {s : SessionTok} {α : Type} {σ : SSort} [IntoSymExpr s α σ]
+  for (expr : α)
+  returns SymPyM s String => SymbolicLean.pretty expr
+
 generate_sympy_alias T {s : SessionTok} {α : Type} {d : DomainDesc} {m n : Dim}
   [IntoSymExpr s α (.matrix d m n)] [DomainCarrier d] for (matrix : α)
   returns SymPyM s (SymExpr s (.matrix d n m)) => SymbolicLean.T matrix
@@ -275,17 +298,37 @@ generate_sympy_alias I {s : SessionTok} {α : Type} {d : DomainDesc} {n : Dim}
   [IntoSymExpr s α (.matrix d n n)] [DomainCarrier d] [InterpretsField d] for (matrix : α)
   returns SymPyM s (SymExpr s (.matrix d n n)) => SymbolicLean.I matrix
 
+generate_sympy_alias det {s : SessionTok} {α : Type} {d : DomainDesc} {n : Dim}
+  [IntoSymExpr s α (.matrix d n n)] [DomainCarrier d] [InterpretsCommRing d] for (matrix : α)
+  returns SymPyM s (SymExpr s (.scalar d)) => SymbolicLean.det matrix
+
+generate_sympy_alias rref {s : SessionTok} {α : Type} {d : DomainDesc} {m n : Dim}
+  [IntoSymExpr s α (.matrix d m n)] [DomainCarrier d] [InterpretsField d] for (matrix : α)
+  returns SymPyM s (RRefResult s d m n) => SymbolicLean.rref matrix
+
 generate_sympy_alias Derivative {σ : SSort} {d : DomainDesc}
   for (body : Term σ) (x : SymDecl (.scalar d)) (order : Nat := 1)
   returns Term σ => SymbolicLean.diff body x order
 
-generate_sympy_alias Integral {d : DomainDesc}
-  for (body : Term (.scalar d)) (x : SymDecl (.scalar d))
-  returns Term (.scalar d) => SymbolicLean.integral body x
+generate_sympy_alias Integral {d : DomainDesc} {α : Type} [IntoBoundSpec d α]
+  for (body : Term (.scalar d)) (bound : α)
+  returns Term (.scalar d) => SymbolicLean.integralWith body (IntoBoundSpec.intoBoundSpec bound)
+
+generate_sympy_alias Sum {d : DomainDesc} {α : Type} [IntoBoundSpec d α]
+  for (body : Term (.scalar d)) (bound : α)
+  returns Term (.scalar d) => SymbolicLean.summation body (IntoBoundSpec.intoBoundSpec bound)
+
+generate_sympy_alias Product {d : DomainDesc} {α : Type} [IntoBoundSpec d α]
+  for (body : Term (.scalar d)) (bound : α)
+  returns Term (.scalar d) => SymbolicLean.productTerm body (IntoBoundSpec.intoBoundSpec bound)
 
 generate_sympy_alias Limit {d : DomainDesc}
   for (body : Term (.scalar d)) (x : SymDecl (.scalar d)) (atPoint : Term (.scalar d))
   returns Term (.scalar d) => SymbolicLean.limit body x atPoint
+
+generate_sympy_alias Piecewise {σ : SSort} {α : Type} [IntoPieceBranch σ α]
+  for (branch : α) (fallback : Term σ)
+  returns Term σ => SymbolicLean.piecewise (IntoPieceBranch.intoPieceBranch branch) fallback
 
 generate_sympy_q_const positive returns Assumption => .positive
 generate_sympy_q_const nonnegative returns Assumption => .nonnegative

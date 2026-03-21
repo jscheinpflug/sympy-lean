@@ -21,6 +21,16 @@ private def runIO (kind : String) (io : IO α) : SymPyM s α := do
 private def workerScript (config : SessionConfig) : System.FilePath :=
   config.workerPath.getD "tools/sympy_worker.py"
 
+private def resetRemoteState : SessionState → SessionState :=
+  fun st =>
+    { st with
+      worker := none
+      workerReady := false
+      liveRefs := {}
+      declIntern := {}
+      canonicalRefs := {}
+      prettyCache := {} }
+
 private def spawnWorkerIO (config : SessionConfig) : IO WorkerProcess := do
   let child ← IO.Process.spawn
     { cmd := "python3"
@@ -30,6 +40,38 @@ private def spawnWorkerIO (config : SessionConfig) : IO WorkerProcess := do
       stderr := .piped }
   let (stdin, child) ← child.takeStdin
   pure { stdin := stdin, child := child }
+
+private def cleanupWorkerIO (worker : WorkerProcess) : IO Unit := do
+  try
+    worker.stdin.flush
+  catch _ =>
+    pure ()
+  try
+    worker.child.kill
+  catch _ =>
+    pure ()
+  try
+    discard <| worker.child.wait
+  catch _ =>
+    pure ()
+
+private def readLineWithTimeoutIO (worker : WorkerProcess) (timeoutMs : UInt32) : IO String := do
+  let readTask ← IO.asTask do
+    pure <| (← worker.child.stdout.getLine.toBaseIO)
+  let timeoutTask ← IO.asTask do
+    IO.sleep timeoutMs
+    pure <| Except.error <| IO.userError "timed out waiting for worker response"
+  let result : Except IO.Error String ← IO.ofExcept (← IO.waitAny [readTask, timeoutTask])
+  IO.ofExcept result
+
+private def readWorkerLine (kind : String) (worker : WorkerProcess) : SymPyM s String := do
+  let timeoutMs := (← read).config.workerTimeoutMs
+  match (← (readLineWithTimeoutIO worker timeoutMs).toBaseIO) with
+  | .ok line => pure line
+  | .error err =>
+      runIO "shutdown" <| cleanupWorkerIO worker
+      modify resetRemoteState
+      throw <| adaptIO kind err.toString
 
 def startWorker : SymPyM s Unit := do
   let state ← get
@@ -41,7 +83,7 @@ def startWorker : SymPyM s Unit := do
     let pingLine := (toJson (pingRequest 0)).compress
     runIO "startup" <| worker.stdin.putStrLn pingLine
     runIO "startup" <| worker.stdin.flush
-    let responseLine ← runIO "startup" <| worker.child.stdout.getLine
+    let responseLine ← readWorkerLine "startup" worker
     if responseLine.isEmpty then
       throw <| .worker <| .startupFailed "worker closed stdout during startup ping"
     let pong ←
@@ -58,10 +100,8 @@ def stopWorker : SymPyM s Unit := do
   match state.worker with
   | none => pure ()
   | some worker =>
-      runIO "shutdown" worker.stdin.flush
-      runIO "shutdown" worker.child.kill
-      discard <| runIO "shutdown" worker.child.wait
-      modify fun st => { st with worker := none, workerReady := false }
+      runIO "shutdown" <| cleanupWorkerIO worker
+      modify resetRemoteState
 
 private def nextRequestId : SymPyM s Nat := do
   let state ← get
@@ -89,7 +129,7 @@ def sendRequest (request : WorkerRequest) : SymPyM s WorkerResponse := do
   let line := (toJson request).compress
   runIO "request" <| worker.stdin.putStrLn line
   runIO "request" <| worker.stdin.flush
-  let responseLine ← runIO "request" <| worker.child.stdout.getLine
+  let responseLine ← readWorkerLine "request" worker
   if responseLine.isEmpty then
     throw <| .worker <| .requestFailed "worker closed stdout before replying"
   match parseResponseText responseLine with

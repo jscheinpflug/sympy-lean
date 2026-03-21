@@ -212,6 +212,23 @@ private def elabDeclareJsonOpWithExtras
   attachGeneratedDoc name doc?
   registerSymbolicDecl .op name opLiteral .effectfulOp doc?
 
+macro_rules
+  | `(declare_sympy_op $name:ident => $op:str) =>
+      `(declare_sympy_op $name {σ : SSort} for (expr : SymExpr s σ) returns σ => $op)
+  | `(declare_sympy_op $name:ident => $op:str doc $docString:str) =>
+      `(declare_sympy_op $name {σ : SSort} for (expr : SymExpr s σ) returns σ => $op doc $docString)
+  | `(declare_op $name:ident => $op:str) =>
+      `(declare_op $name {σ : SSort} for (expr : SymExpr s σ) returns σ => $op)
+  | `(declare_op $name:ident => $op:str doc $docString:str) =>
+      `(declare_op $name {σ : SSort} for (expr : SymExpr s σ) returns σ => $op doc $docString)
+  | `(declare_head $name:ident $_binders:bracketedBinder*
+      for ($_arg:ident : $_argTy:term) returns $_outSort:term => $backendName:str) =>
+      `(declare_head $name => $backendName)
+  | `(declare_head $name:ident $_binders:bracketedBinder*
+      for ($_arg:ident : $_argTy:term) returns $_outSort:term => $backendName:str
+      doc $docString:str) =>
+      `(declare_head $name => $backendName doc $docString)
+
 elab "declare_sympy_op " name:ident " => " op:str : command => do
   let sigmaBinder ← `(bracketedBinder| {σ : SSort})
   let argTy ← `(term| SymExpr s σ)
@@ -220,6 +237,20 @@ elab "declare_sympy_op " name:ident " => " op:str : command => do
   elabDeclareSympyOp name #[sigmaBinder.raw] exprId argTy outSort op none
 
 elab "declare_sympy_op " name:ident " => " op:str " doc " docString:str : command => do
+  let sigmaBinder ← `(bracketedBinder| {σ : SSort})
+  let argTy ← `(term| SymExpr s σ)
+  let outSort ← `(term| σ)
+  let exprId := Lean.mkIdent `expr
+  elabDeclareSympyOp name #[sigmaBinder.raw] exprId argTy outSort op (some docString)
+
+elab "declare_op " name:ident " => " op:str : command => do
+  let sigmaBinder ← `(bracketedBinder| {σ : SSort})
+  let argTy ← `(term| SymExpr s σ)
+  let outSort ← `(term| σ)
+  let exprId := Lean.mkIdent `expr
+  elabDeclareSympyOp name #[sigmaBinder.raw] exprId argTy outSort op none
+
+elab "declare_op " name:ident " => " op:str " doc " docString:str : command => do
   let sigmaBinder ← `(bracketedBinder| {σ : SSort})
   let argTy ← `(term| SymExpr s σ)
   let outSort ← `(term| σ)
@@ -235,20 +266,6 @@ elab "declare_sympy_op " name:ident binders:bracketedBinder*
     " for " "(" arg:ident " : " argTy:term ")" " returns " outSort:term " => " op:str
     " doc " docString:str : command => do
   elabDeclareSympyOp name (binders.map (·.raw)) arg argTy outSort op (some docString)
-
-elab "declare_op " name:ident " => " op:str : command => do
-  let sigmaBinder ← `(bracketedBinder| {σ : SSort})
-  let argTy ← `(term| SymExpr s σ)
-  let outSort ← `(term| σ)
-  let exprId := Lean.mkIdent `expr
-  elabDeclareSympyOp name #[sigmaBinder.raw] exprId argTy outSort op none
-
-elab "declare_op " name:ident " => " op:str " doc " docString:str : command => do
-  let sigmaBinder ← `(bracketedBinder| {σ : SSort})
-  let argTy ← `(term| SymExpr s σ)
-  let outSort ← `(term| σ)
-  let exprId := Lean.mkIdent `expr
-  elabDeclareSympyOp name #[sigmaBinder.raw] exprId argTy outSort op (some docString)
 
 elab "declare_op " name:ident binders:bracketedBinder*
     " for " "(" arg:ident " : " argTy:term ")" " returns " outSort:term " => " op:str :
@@ -332,18 +349,6 @@ elab "declare_head " name:ident " => " backendName:str : command => do
   elabDeclareHead name backendName none
 
 elab "declare_head " name:ident " => " backendName:str " doc " docString:str : command => do
-  elabDeclareHead name backendName (some docString)
-
-elab "declare_head " name:ident binders:bracketedBinder*
-    " for " "(" _arg:ident " : " _argTy:term ")" " returns " _outSort:term " => "
-    backendName:str : command => do
-  let _ := binders
-  elabDeclareHead name backendName none
-
-elab "declare_head " name:ident binders:bracketedBinder*
-    " for " "(" _arg:ident " : " _argTy:term ")" " returns " _outSort:term " => "
-    backendName:str " doc " docString:str : command => do
-  let _ := binders
   elabDeclareHead name backendName (some docString)
 
 end SymbolicLean

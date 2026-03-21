@@ -5,7 +5,7 @@
 
 ## Responsibilities
 - Define session configuration, environment, and mutable runtime state.
-- Reserve storage for the worker handle, live refs, declaration interning, caches, and dynamic shape metadata.
+- Reserve storage for the worker handle, timeout configuration, live refs, declaration interning, and caches.
 - Track worker readiness and canonical-expression ref reuse within a session.
 
 ## Public Surface

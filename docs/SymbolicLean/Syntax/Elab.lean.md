@@ -7,6 +7,7 @@
 - Provide the registry-aware `symcall%` symbolic application entrypoint.
 - Offer plain-Lean capitalized builders for structured symbolic heads such as `Derivative`, `Integral`, `Limit`, `Sum`, `Product`, `Lambda`, and `Piecewise`.
 - Centralize named-argument splitting and error routing for the symbolic call surface.
+- Accept both raw structured specs and the simpler tuple/decl forms supported by the structured-argument conversion layer.
 
 ## Public Surface
 - `symcall% name(...)`
@@ -22,6 +23,7 @@
 ## Change Triggers
 - Update when new registry-backed structured heads need ordinary Lean builder coverage.
 - Update when named-argument conventions or symbolic-call diagnostics change.
+- Update when the public structured-head input conversion rules change.
 - Update when discoverability or schema validation should be shared with other syntax layers.
 
 ## Related Files

@@ -80,7 +80,7 @@ def productTerm (body : Term (.scalar d)) (bound : BoundSpec d) : Term (.scalar 
 def lambdaTerm (body : Term σ) (var : BoundVar d) : Term (.fn [.scalar d] σ) :=
   .headApp (.ext (lambdaHeadSpec σ d)) (.pair body (var : Term (.scalar d)))
 
-def piecewise (branch : PieceBranch σ) (fallback : Term σ) : Term σ :=
+@[match_pattern] def piecewise (branch : PieceBranch σ) (fallback : Term σ) : Term σ :=
   .headApp (.ext (piecewiseHeadSpec σ))
     (.cons branch.body (.cons branch.condition (.cons fallback .nil)))
 

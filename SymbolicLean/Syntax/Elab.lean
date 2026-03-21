@@ -187,26 +187,29 @@ elab_rules : term
       let expanded ← expandSymcall name args.getElems
       elabTerm expanded none
 
-def Derivative (body : Term σ) (spec : DerivSpec σ d) : Term σ :=
-  diffWith body spec
+def Derivative {α : Type} [IntoDerivSpec σ d α] (body : Term σ) (spec : α) : Term σ :=
+  diffWith body (IntoDerivSpec.intoDerivSpec (σ := σ) (d := d) spec)
 
-def Integral (body : Term (.scalar d)) (bound : BoundSpec d) : Term (.scalar d) :=
-  integralWith body bound
+def Integral {α : Type} [IntoBoundSpec d α] (body : Term (.scalar d)) (bound : α) :
+    Term (.scalar d) :=
+  integralWith body (IntoBoundSpec.intoBoundSpec (d := d) bound)
 
 def Limit (body : Term (.scalar d)) (x : SymDecl (.scalar d)) (atPoint : Term (.scalar d)) :
     Term (.scalar d) :=
   limit body x atPoint
 
-def Sum (body : Term (.scalar d)) (bound : BoundSpec d) : Term (.scalar d) :=
-  summation body bound
+def Sum {α : Type} [IntoBoundSpec d α] (body : Term (.scalar d)) (bound : α) :
+    Term (.scalar d) :=
+  summation body (IntoBoundSpec.intoBoundSpec (d := d) bound)
 
-def Product (body : Term (.scalar d)) (bound : BoundSpec d) : Term (.scalar d) :=
-  productTerm body bound
+def Product {α : Type} [IntoBoundSpec d α] (body : Term (.scalar d)) (bound : α) :
+    Term (.scalar d) :=
+  productTerm body (IntoBoundSpec.intoBoundSpec (d := d) bound)
 
 def Lambda (body : Term σ) (x : SymDecl (.scalar d)) : Term (.fn [.scalar d] σ) :=
   lambdaTerm body x
 
-def Piecewise (branch : PieceBranch σ) (fallback : Term σ) : Term σ :=
-  piecewise branch fallback
+def Piecewise {α : Type} [IntoPieceBranch σ α] (branch : α) (fallback : Term σ) : Term σ :=
+  piecewise (IntoPieceBranch.intoPieceBranch (σ := σ) branch) fallback
 
 end SymbolicLean

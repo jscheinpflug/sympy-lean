@@ -10,7 +10,7 @@ def withSession (config : SessionConfig) (k : ∀ s : SessionTok, SymPyM s α) :
     IO (Except SymPyError α) := do
   let env : SessionEnv := { config := config }
   let init : SessionState := {}
-  let tok : SessionTok := { nonce := 0 }
+  let tok : SessionTok := { nonce := ← IO.monoNanosNow }
   match (← (((k tok).run env).run init).run) with
   | .error err => return .error err
   | .ok (value, _) => return .ok value

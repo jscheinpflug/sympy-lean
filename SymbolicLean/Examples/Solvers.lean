@@ -4,12 +4,12 @@ open SymbolicLean
 
 -- Solve a scalar polynomial equation as a finite solve.
 #eval do
-  let result ← sympy (carrierDomain Rat) do
+  let result ← sympy Rat do
     symbols (x : Rat)
-    let xTerm : Term (Scalar Rat) := x
-    let solved ← solveUnivariate (xTerm ^ 2 - qq 1) x
+    let expr : Term (Scalar Rat) := x ^ 2 - 1
+    let solved ← solveUnivariate expr x
     match solved.solutions with
-    | solution :: _ => IO.println (← prettyRemote solution.ref)
+    | solution :: _ => IO.println (← pretty solution)
     | [] => IO.println "[]"
   match result with
   | .ok _ => pure ()
@@ -17,24 +17,23 @@ open SymbolicLean
 
 -- Show the symbolic solve-set result.
 #eval do
-  let result ← sympy (carrierDomain Rat) do
+  let result ← sympy Rat do
     symbols (x : Rat)
-    let xTerm : Term (Scalar Rat) := x
-    let solved := solveset (xTerm ^ 2 - qq 1) x
-    let setExpr ← solved
-    prettyRemote setExpr.setExpr.ref
+    let expr : Term (Scalar Rat) := x ^ 2 - 1
+    let setExpr ← solveset expr x
+    pretty setExpr.setExpr
   match result with
   | .ok text => IO.println text
   | .error err => IO.println (repr err)
 
 -- Solver front-door methods also work through Lean field notation.
 #eval do
-  let result ← sympy (carrierDomain Rat) do
+  let result ← sympy Rat do
     symbols (x : Rat)
-    let xTerm : Term (Scalar Rat) := x
-    let solved ← (xTerm ^ 2 - qq 1).solveUnivariate x
+    let expr : Term (Scalar Rat) := x ^ 2 - 1
+    let solved ← expr.solveUnivariate x
     match solved.solutions with
-    | solution :: _ => IO.println (← prettyRemote solution.ref)
+    | solution :: _ => IO.println (← pretty solution)
     | [] => IO.println "[]"
   match result with
   | .ok _ => pure ()
@@ -42,23 +41,22 @@ open SymbolicLean
 
 -- Solve a first-order ODE from pure declarations.
 #eval do
-  let result ← sympy (carrierDomain Rat) do
+  let result ← sympy Rat do
     symbols (x : Rat)
     functions (f : Rat → Rat)
     let ode : Term .boolean := eq_ (SymPy.Derivative (f x) x) (f x)
     let solved ← dsolve ode f
-    prettyRemote solved.equation.ref
+    pretty solved.equation
   match result with
   | .ok text => IO.println text
   | .error err => IO.println (repr err)
 
 -- Boolean solver and assumption query examples.
 #eval do
-  let result ← sympy (carrierDomain Rat) do
+  let result ← sympy Rat do
     symbols (x : Rat | positive)
-    let xTerm : Term (Scalar Rat) := x
-    let zeroExpr : Term (Scalar Rat) := xTerm - xTerm
-    let satFormula : Term .boolean := and_ (gt xTerm zeroExpr) SymPy.S.true_
+    let zeroExpr : Term (Scalar Rat) := x - x
+    let satFormula : Term .boolean := and_ (gt x zeroExpr) SymPy.S.true_
     let sat ← satFormula.satisfiable
     IO.println (repr sat)
     let answer ← x.ask SymPy.Q.positive
@@ -69,7 +67,7 @@ open SymbolicLean
 
 -- Assumption scopes shadow declarations with additional `Q.*` facts inside ordinary Lean `do`.
 #eval do
-  let result ← sympy (carrierDomain Rat) do
+  let result ← sympy Rat do
     symbols (x : Rat)
     assuming [x ↦ SymPy.Q.positive] do
       let answer ← x.ask SymPy.Q.positive
