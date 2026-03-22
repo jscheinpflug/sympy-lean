@@ -18,14 +18,14 @@ The project is deliberately narrow:
 - Typed symbolic terms via `Term`, including scalar arithmetic, logic, relations, calculus heads, matrices, containers, and structured symbolic forms
 - Session-scoped realized expressions via `SymExpr` and `SymPyM`
 - Front-door algebra, calculus, evaluation/render, linear-algebra, and solver operations over declarations, terms, or realized expressions
-- Registry-backed pure special functions and a minimal solver-facing set vocabulary
+- Registry-backed pure special functions plus solver-facing set and matrix vocabulary such as `Interval`, `FiniteSet`, and `Trace`
 - Ordinary-Lean syntax for:
   - `sympy Rat do ...`
   - `#sympy Rat => ...`
   - `Derivative`, `Integral`, `Sum`, `Product`, `Lambda`, `Piecewise`, `Limit`
   - substitution, indexing, slicing, dictionaries, and scoped assumptions
 - Round-trip bridges through `realize`, `reify`, and `pretty`
-- Canonical effectful front doors such as `solve`, `integrate`, `doit`, `evalf`, and `latex`
+- Canonical effectful front doors such as `solve`, `integrate`, `differentiate`, `doit`, `evalf`, `latex`, and `trace`
 
 ## Quick Examples
 
@@ -56,10 +56,10 @@ Lean:
 SymPy:
 
 ```python
-from sympy import Min, atan2, exp, log, symbols
+from sympy import Min, atan2, sin, sqrt, symbols
 x, y = symbols("x y")
 
-exp(x) + log(x + 1) + atan2(x, y) + Min(1, x, y)
+sin(x) + sqrt(x + 1) + atan2(x, y) + Min(1, x, y)
 ```
 
 Lean:
@@ -68,7 +68,7 @@ Lean:
 example : Term (Scalar Rat) :=
   let x : SymDecl (Scalar Rat) := sym `x
   let y : SymDecl (Scalar Rat) := sym `y
-  SymPy.exp x + SymPy.log (x + 1) + SymPy.atan2 x y +
+  SymPy.sin x + SymPy.sqrt (x + 1) + SymPy.atan2 x y +
     SymPy.Min ([x, y, (1 : Term (Scalar Rat))] : List (Term (Scalar Rat)))
 ```
 
@@ -97,25 +97,25 @@ Lean:
   | .error err => IO.println (repr err)
 ```
 
-### Matrix determinant
+### Eager calculus
 
 SymPy:
 
 ```python
-from sympy import MatrixSymbol
-A = MatrixSymbol("A", 2, 2)
+from sympy import diff, symbols
+x = symbols("x")
 
-A.det()
+diff(x**3, x, 2)
 ```
 
 Lean:
 
 ```lean
 #eval do
-  let result ← withSession {} fun _s => do
-    symbols (A : Mat Rat 2 2)
-    let determinant ← det A
-    pretty determinant
+  let result ← sympy Rat do
+    symbols (x : Rat)
+    let derived ← differentiate (x ^ 3 : Term (Scalar Rat)) x 2
+    pretty derived
   match result with
   | .ok text => IO.println text
   | .error err => IO.println (repr err)
@@ -126,10 +126,11 @@ Lean:
 SymPy:
 
 ```python
-from sympy import solve, symbols
+from sympy import solve, solveset, symbols
 x = symbols("x")
 
 solve(x**2 - 1, x)
+solveset(x**2 - 1, x)
 ```
 
 Lean:
@@ -140,9 +141,13 @@ Lean:
     symbols (x : Rat)
     let expr : Term (Scalar Rat) := x ^ 2 - 1
     let solved ← solve expr x
-    match solved.solutions with
-    | solution :: _ => IO.println (← pretty solution)
-    | [] => IO.println "[]"
+    let setExpr ← solveset expr x
+    let firstText ←
+      match solved.solutions with
+      | solution :: _ => pretty solution
+      | [] => pure "[]"
+    let setText ← pretty setExpr.setExpr
+    IO.println s!"first={← firstText}\nset={setText}"
   match result with
   | .ok _ => pure ()
   | .error err => IO.println (repr err)
@@ -168,9 +173,39 @@ Lean:
   let result ← sympy Rat do
     symbols (x : Rat | positive)
     let intervalText ← pretty (SymPy.Interval 0 x)
-    let finiteText ← pretty (SymPy.FiniteSet ([x, (1 : Term (Scalar Rat))] : List (Term (Scalar Rat))))
+    let finiteText ←
+      pretty (SymPy.FiniteSet ([x, (1 : Term (Scalar Rat))] : List (Term (Scalar Rat))))
     let answer ← x.ask SymPy.Q.positive
     pure s!"{intervalText}\n{finiteText}\n{repr answer}"
+  match result with
+  | .ok text => IO.println text
+  | .error err => IO.println (repr err)
+```
+
+### Matrix workflow
+
+SymPy:
+
+```python
+from sympy import MatrixSymbol, Trace, trace
+A = MatrixSymbol("A", 2, 2)
+
+Trace(A)
+trace(A)
+```
+
+Lean:
+
+```lean
+example : Term (Scalar Rat) :=
+  let A : SymDecl (Mat Rat 2 2) := sym `A
+  SymPy.Trace A
+
+#eval do
+  let result ← withSession {} fun _s => do
+    symbols (A : Mat Rat 2 2)
+    let tr ← trace A
+    pretty tr
   match result with
   | .ok text => IO.println text
   | .error err => IO.println (repr err)
@@ -229,6 +264,7 @@ end
 - Implementation status snapshot: [`docs/plans/symboliclean-implementation.md`](docs/plans/symboliclean-implementation.md)
 - Public example docs:
   - [`docs/SymbolicLean/Examples/Scalars.lean.md`](docs/SymbolicLean/Examples/Scalars.lean.md)
+  - [`docs/SymbolicLean/Examples/ScalarsRuntime.lean.md`](docs/SymbolicLean/Examples/ScalarsRuntime.lean.md)
   - [`docs/SymbolicLean/Examples/Evaluation.lean.md`](docs/SymbolicLean/Examples/Evaluation.lean.md)
   - [`docs/SymbolicLean/Examples/Matrices.lean.md`](docs/SymbolicLean/Examples/Matrices.lean.md)
   - [`docs/SymbolicLean/Examples/Proofs.lean.md`](docs/SymbolicLean/Examples/Proofs.lean.md)
@@ -250,6 +286,8 @@ lake build SymbolicLean
 lake build SymbolicLean.Examples
 lake env lean SymbolicLean/Examples/Evaluation.lean
 lake env lean SymbolicLean/Examples/Scalars.lean
+# optional deeper scalar runtime/reify smoke
+lake env lean SymbolicLean/Examples/ScalarsRuntime.lean
 lake env lean SymbolicLean/Examples/Matrices.lean
 lake env lean SymbolicLean/Examples/SpecialFunctions.lean
 lake env lean SymbolicLean/Examples/Solvers.lean
