@@ -129,6 +129,8 @@ Main docs:
 - [Term/Logic](SymbolicLean/Term/Logic.lean.md)
 - [Term/Relations](SymbolicLean/Term/Relations.lean.md)
 - [Term/Calculus](SymbolicLean/Term/Calculus.lean.md)
+- [Term/SpecialFunctions](SymbolicLean/Term/SpecialFunctions.lean.md)
+- [Term/Sets](SymbolicLean/Term/Sets.lean.md)
 - [Term/Structured](SymbolicLean/Term/Structured.lean.md)
 - [Term/Containers](SymbolicLean/Term/Containers.lean.md)
 - [Term/View](SymbolicLean/Term/View.lean.md)
@@ -201,6 +203,7 @@ Main docs:
 - raw op layers:
   - [Ops/Algebra](SymbolicLean/Ops/Algebra.lean.md)
   - [Ops/Calculus](SymbolicLean/Ops/Calculus.lean.md)
+  - [Ops/Evaluation](SymbolicLean/Ops/Evaluation.lean.md)
   - [Ops/LinearAlgebra](SymbolicLean/Ops/LinearAlgebra.lean.md)
   - [Ops/Solvers](SymbolicLean/Ops/Solvers.lean.md)
 - front-door wrapper layer:
@@ -210,6 +213,7 @@ Main docs:
 
 Purpose:
 - define low-level realized operations over `SymExpr`,
+- define raw evaluation/rendering operations such as `doit`, `evalf`, and `latex`,
 - decode structured payloads such as finite solves, solver models, and `rref`,
 - lift those realized operations onto pure declarations and terms through `IntoSymExpr`, `IntoSymSymbol`, and `IntoSymFun`,
 - export the public `SymPy.*` namespace aliases and Lean field-notation wrappers.
@@ -226,15 +230,17 @@ Main docs:
 
 Purpose:
 - store environment metadata for symbolic heads and effectful ops,
-- generate wrappers through `declare_op`, `declare_head`, and related helpers,
+- generate wrappers through `declare_pure_head`, `declare_scalar_fn₁`, `declare_scalar_fn₂`, `declare_op`, and `register_op`,
 - emit a manifest that the Python worker loads at startup.
 
 This registry-backed design is what keeps new heads and new worker operations discoverable without hard-coding everything in one place.
 
 ### Examples and negative tests
 Main docs:
+- [Examples/Evaluation](SymbolicLean/Examples/Evaluation.lean.md)
 - [Examples/Scalars](SymbolicLean/Examples/Scalars.lean.md)
 - [Examples/Matrices](SymbolicLean/Examples/Matrices.lean.md)
+- [Examples/SpecialFunctions](SymbolicLean/Examples/SpecialFunctions.lean.md)
 - [Examples/Solvers](SymbolicLean/Examples/Solvers.lean.md)
 - [Examples/Negative](SymbolicLean/Examples/Negative.lean.md)
 
@@ -595,7 +601,7 @@ Lean:
   let result ← sympy Rat do
     symbols (x : Rat)
     let expr : Term (Scalar Rat) := x ^ 2 - 1
-    let solved ← solveUnivariate expr x
+    let solved ← solve expr x
     match solved.solutions with
     | solution :: _ => IO.println (← pretty solution)
     | [] => IO.println "[]"
@@ -814,15 +820,12 @@ example : Term (Scalar Int) :=
 
 Use this route when the operation should first exist as a pure `Term`, even before any worker-backed effectful API.
 
-1. Decide whether the new construct belongs in an existing term family.
-   - arithmetic / logic / relations go in the existing core term helpers,
-   - structured symbolic forms usually belong in [Term/Structured](SymbolicLean/Term/Structured.lean.md),
-   - indexing-like or map-like syntax belongs in [Term/Containers](SymbolicLean/Term/Containers.lean.md).
-2. Define the head name and typed helper.
-3. Register the head in [Term/RegistryHeads](SymbolicLean/Term/RegistryHeads.lean.md) so it enters the generated manifest.
+1. Decide whether the head belongs to the built-in core term families or to the registry-driven extension surface.
+2. For ordinary scalar unary/binary heads or small extension vocabularies, prefer `declare_pure_head`, `declare_scalar_fn₁`, or `declare_scalar_fn₂` in a focused term module.
+3. Reserve [Term/RegistryHeads](SymbolicLean/Term/RegistryHeads.lean.md) for the built-in core heads that are not declared through the generic extension machinery.
 4. If the head needs canonicalization or internal pattern matching support, update [Term/View](SymbolicLean/Term/View.lean.md) and [Term/Canon](SymbolicLean/Term/Canon.lean.md).
 5. If worker-side reification needs to reconstruct the term shape specially, update [Backend/Decode](SymbolicLean/Backend/Decode.lean.md) and the worker logic.
-6. If users need a friendlier surface, add a builder in [Syntax/Elab](SymbolicLean/Syntax/Elab.lean.md) or a `SymPy.*` alias in [Ops/Core](SymbolicLean/Ops/Core.lean.md).
+6. If users need a friendlier surface, add a builder in [Syntax/Elab](SymbolicLean/Syntax/Elab.lean.md) or a `SymPy.*` alias / `SymPy.S.*` front door in [Ops/Core](SymbolicLean/Ops/Core.lean.md).
 7. Add positive and, if relevant, negative examples.
 8. Update mirrored docs and rebuild the manifest through the normal build.
 
@@ -835,14 +838,16 @@ Use this route when the operation fundamentally requires a realized SymPy object
 1. Add the raw realized operation in the appropriate raw op module:
    - [Ops/Algebra](SymbolicLean/Ops/Algebra.lean.md)
    - [Ops/Calculus](SymbolicLean/Ops/Calculus.lean.md)
+   - [Ops/Evaluation](SymbolicLean/Ops/Evaluation.lean.md)
    - [Ops/LinearAlgebra](SymbolicLean/Ops/LinearAlgebra.lean.md)
    - [Ops/Solvers](SymbolicLean/Ops/Solvers.lean.md)
 2. If the op returns a backend ref, the `declare_op ... returns ...` path is usually enough.
-3. If the op returns structured JSON, add or reuse a typed result container in [Ops/Results](SymbolicLean/Ops/Results.lean.md) and decode it in the raw op layer.
-4. Implement the matching worker branch in `tools/sympy_worker.py`.
-5. Expose the ergonomic public front door in [Ops/Core](SymbolicLean/Ops/Core.lean.md) if the op should accept `Term`, `SymDecl`, or `SymExpr` uniformly.
-6. Add `pretty`-based executable examples if the op is meant to be used end-to-end.
-7. Update mirrored docs.
+3. If the op returns plain JSON and the payload type has `[FromJson α]`, prefer the generic `declare_op ... decodes α` path.
+4. If the op returns structured JSON beyond `FromJson`, add or reuse a typed result container in [Ops/Results](SymbolicLean/Ops/Results.lean.md) and decode it in the raw op layer, or use `register_op` when the implementation has to stay hand-written.
+5. Implement the matching worker branch in `tools/sympy_worker.py` only when the generic manifest-dispatched path is not enough.
+6. Expose the ergonomic public front door in [Ops/Core](SymbolicLean/Ops/Core.lean.md) if the op should accept `Term`, `SymDecl`, or `SymExpr` uniformly.
+7. Add executable examples if the op is meant to be used end-to-end.
+8. Update mirrored docs.
 
 Default rule: raw backend operation first, public ergonomic wrapper second.
 

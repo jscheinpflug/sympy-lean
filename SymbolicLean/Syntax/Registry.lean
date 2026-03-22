@@ -1,4 +1,5 @@
 import Lean
+import SymbolicLean.Sort.Base
 
 namespace SymbolicLean
 
@@ -33,11 +34,24 @@ inductive ResultMode where
   | structured
   deriving Repr, Inhabited, BEq, Hashable, ToJson
 
+inductive CallStyle where
+  | call
+  | attr
+  deriving Repr, Inhabited, BEq, Hashable, ToJson
+
+structure PureSpec where
+  args : List SSort
+  result : SSort
+  deriving Repr, ToJson
+
 structure RegistryMetadata where
   surfaceRole : SurfaceRole := .free
   dispatchMode : DispatchMode
   reifyMode : ReifyMode := .opaque
   resultMode : ResultMode := .direct
+  backendPath : List String := []
+  callStyle : CallStyle := .call
+  pureSpec? : Option PureSpec := none
   aliases : List String := []
   categories : List String := []
   docs : Option String := none

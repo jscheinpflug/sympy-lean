@@ -8,7 +8,7 @@
 - Use `declare_op` for the raw ref-returning ODE, solve-set, and finite-solve steps.
 - Use the JSON-decoding `declare_op` path for satisfiability, assumption-query, and finite-solve payloads.
 - Decode finite-solution, set-valued, ODE, satisfiability, and assumption-query results into typed Lean containers.
-- Keep the low-level realized-object entry points separate from the later conversion layer in `Ops/Core`.
+- Keep the low-level realized-object entry points separate from the later conversion layer in `Ops/Core`, where `solve` becomes the canonical public front door and `solveUnivariate` remains a compatibility alias.
 
 ## Public Surface
 - `solveUnivariateExpr`
@@ -21,7 +21,7 @@
 ## Change Triggers
 - Solver op coverage changes.
 - Worker op names or solver payload conventions change.
-- A later front-door conversion layer starts routing pure inputs here.
+- The front-door conversion layer changes how `solve` compatibility aliases are routed.
 - Result packaging for `declare_op`-generated solver entry points changes.
 
 ## Related Files

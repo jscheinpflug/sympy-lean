@@ -7,7 +7,7 @@
 - Define the thin front-door conversion layer between pure declarations/terms and realized operation APIs.
 - Accept pure declarations and small scalar literals directly where the public op layer expects realized expressions.
 - Generate the front-door wrappers that back type-namespaced Lean field notation for unary methods, multi-argument methods, receiver properties, and pure `SymPy` heads.
-- Carry those method/property-style wrappers across algebra, linear algebra, and solver-facing front-door APIs.
+- Carry those method/property-style wrappers across algebra, calculus, evaluation/render, linear algebra, solver, and minimal set-facing front-door APIs.
 - Generate the scoped `SymPy`, `SymPy.Q`, and `SymPy.S` namespace surface so short names do not leak into the global namespace.
 - Keep the conversion logic explicit and reusable without collapsing the pure/effectful architecture.
 - Close the public-surface gap between raw realized-only ops and the pure-input front door used by the examples.
@@ -24,6 +24,11 @@
 - `expand`
 - `cancel`
 - `pretty`
+- `doit`
+- `evalf`
+- `latex`
+- `integrate`
+- `solve`
 - `solveUnivariate`
 - `solveset`
 - `dsolve`
@@ -34,10 +39,15 @@
 - `det`
 - `rref`
 - `SymPy.pretty`
+- `SymPy.doit`
+- `SymPy.evalf`
+- `SymPy.latex`
 - `SymPy.simplify`
 - `SymPy.factor`
 - `SymPy.expand`
 - `SymPy.cancel`
+- `SymPy.integrate`
+- `SymPy.solve`
 - `SymPy.T`
 - `SymPy.I`
 - `SymPy.det`
@@ -51,7 +61,14 @@
 - `SymPy.Q.*`
 - `SymPy.S.true_`
 - `SymPy.S.false_`
+- `SymPy.S.Reals`
+- `SymPy.S.Integers`
 - `Term.pretty`
+- `Term.doit`
+- `Term.evalf`
+- `Term.latex`
+- `Term.integrate`
+- `Term.solve`
 - `Term.det`
 - `Term.rref`
 - `Term.solveUnivariate`
@@ -59,6 +76,11 @@
 - `Term.dsolve`
 - `Term.satisfiable`
 - `SymExpr.pretty`
+- `SymExpr.doit`
+- `SymExpr.evalf`
+- `SymExpr.latex`
+- `SymExpr.integrate`
+- `SymExpr.solve`
 - `SymExpr.det`
 - `SymExpr.rref`
 - `SymExpr.solveUnivariate`
@@ -66,6 +88,13 @@
 - `SymExpr.dsolve`
 - `SymExpr.satisfiable`
 - `SymDecl.pretty`
+- `SymDecl.doit`
+- `SymDecl.evalf`
+- `SymDecl.latex`
+- `SymDecl.integrate`
+- `SymDecl.solve`
+- `SymDecl.solveUnivariate`
+- `SymDecl.solveset`
 - `SymDecl.det`
 - `SymDecl.rref`
 - `SymDecl.ask`
@@ -79,5 +108,6 @@
 
 ## Related Files
 - [`Algebra.lean.md`](Algebra.lean.md)
+- [`Evaluation.lean.md`](Evaluation.lean.md)
 - [`Solvers.lean.md`](Solvers.lean.md)
 - [`../Backend/Realize.lean.md`](../Backend/Realize.lean.md)

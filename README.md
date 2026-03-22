@@ -17,15 +17,19 @@ The project is deliberately narrow:
 - Pure symbolic declarations and functions via `SymDecl`, `FunDecl`, `sym`, `funSym`, `symbols`, and `functions`
 - Typed symbolic terms via `Term`, including scalar arithmetic, logic, relations, calculus heads, matrices, containers, and structured symbolic forms
 - Session-scoped realized expressions via `SymExpr` and `SymPyM`
-- Front-door algebra, calculus, linear-algebra, and solver operations over declarations, terms, or realized expressions
+- Front-door algebra, calculus, evaluation/render, linear-algebra, and solver operations over declarations, terms, or realized expressions
+- Registry-backed pure special functions and a minimal solver-facing set vocabulary
 - Ordinary-Lean syntax for:
   - `sympy Rat do ...`
   - `#sympy Rat => ...`
   - `Derivative`, `Integral`, `Sum`, `Product`, `Lambda`, `Piecewise`, `Limit`
   - substitution, indexing, slicing, dictionaries, and scoped assumptions
 - Round-trip bridges through `eval`, `reify`, and `pretty`
+- Canonical effectful front doors such as `solve`, `integrate`, `doit`, `evalf`, and `latex`
 
 ## Quick Examples
+
+The executable versions of these snippets live under [`SymbolicLean/Examples`](SymbolicLean/Examples).
 
 ### Exploratory syntax
 
@@ -45,6 +49,26 @@ Lean:
 ```lean
 #sympy Rat => x + y
 #sympy Rat => f x
+```
+
+### Pure special functions
+
+SymPy:
+
+```python
+from sympy import atan2, exp, log, symbols
+x, y = symbols("x y")
+
+exp(x) + log(x + 1) + atan2(x, y)
+```
+
+Lean:
+
+```lean
+example : Term (Scalar Rat) :=
+  let x : SymDecl (Scalar Rat) := sym `x
+  let y : SymDecl (Scalar Rat) := sym `y
+  SymPy.exp x + SymPy.log ((x : Term (Scalar Rat)) + 1) + SymPy.atan2 x y
 ```
 
 ### Polynomial factorization
@@ -114,13 +138,86 @@ Lean:
   let result ← sympy Rat do
     symbols (x : Rat)
     let expr : Term (Scalar Rat) := x ^ 2 - 1
-    let solved ← solveUnivariate expr x
+    let solved ← solve expr x
     match solved.solutions with
     | solution :: _ => IO.println (← pretty solution)
     | [] => IO.println "[]"
   match result with
   | .ok _ => pure ()
   | .error err => IO.println (repr err)
+```
+
+### Solver sets and assumptions
+
+SymPy:
+
+```python
+from sympy import Interval, Q, ask, symbols
+x = symbols("x", positive=True)
+
+Interval(0, x)
+ask(Q.positive(x))
+```
+
+Lean:
+
+```lean
+#eval do
+  let result ← sympy Rat do
+    symbols (x : Rat | positive)
+    let intervalText ← pretty (SymPy.Interval 0 x)
+    let answer ← x.ask SymPy.Q.positive
+    pure s!"{intervalText}\n{repr answer}"
+  match result with
+  | .ok text => IO.println text
+  | .error err => IO.println (repr err)
+```
+
+### Evaluation and rendering
+
+SymPy:
+
+```python
+from sympy import Integral, latex, symbols
+x = symbols("x")
+latex(Integral(x**2, x).doit())
+```
+
+Lean:
+
+```lean
+#eval do
+  let result ← sympy Rat do
+    symbols (x : Rat)
+    let term : Term (Scalar Rat) := SymPy.Integral (x ^ 2) x
+    let evaluated ← term.doit
+    latex evaluated
+  match result with
+  | .ok text => IO.println text
+  | .error err => IO.println (repr err)
+```
+
+### Round-trip after evaluation
+
+Lean:
+
+```lean
+noncomputable section
+
+#eval do
+  let result ← sympy Rat do
+    symbols (x : Rat)
+    let term : Term (Scalar Rat) := SymPy.Integral (((x : Term (Scalar Rat)) ^ 2) + 1) x
+    let evaluated ← term.doit
+    let rendered ← latex evaluated
+    let reified ← reify evaluated
+    let prettyText ← pretty reified
+    pure s!"{rendered}\n{prettyText}"
+  match result with
+  | .ok text => IO.println text
+  | .error err => IO.println (repr err)
+
+end
 ```
 
 ## Documentation
@@ -131,8 +228,10 @@ Lean:
 - Implementation status snapshot: [`docs/plans/symboliclean-implementation.md`](docs/plans/symboliclean-implementation.md)
 - Public example docs:
   - [`docs/SymbolicLean/Examples/Scalars.lean.md`](docs/SymbolicLean/Examples/Scalars.lean.md)
+  - [`docs/SymbolicLean/Examples/Evaluation.lean.md`](docs/SymbolicLean/Examples/Evaluation.lean.md)
   - [`docs/SymbolicLean/Examples/Matrices.lean.md`](docs/SymbolicLean/Examples/Matrices.lean.md)
   - [`docs/SymbolicLean/Examples/Proofs.lean.md`](docs/SymbolicLean/Examples/Proofs.lean.md)
+  - [`docs/SymbolicLean/Examples/SpecialFunctions.lean.md`](docs/SymbolicLean/Examples/SpecialFunctions.lean.md)
   - [`docs/SymbolicLean/Examples/Solvers.lean.md`](docs/SymbolicLean/Examples/Solvers.lean.md)
   - [`docs/SymbolicLean/Examples/Negative.lean.md`](docs/SymbolicLean/Examples/Negative.lean.md)
 
@@ -147,8 +246,11 @@ This project uses a docs-first agentic harness:
 
 ```bash
 lake build SymbolicLean
+lake build SymbolicLean.Examples
+lake env lean SymbolicLean/Examples/Evaluation.lean
 lake env lean SymbolicLean/Examples/Scalars.lean
 lake env lean SymbolicLean/Examples/Matrices.lean
+lake env lean SymbolicLean/Examples/SpecialFunctions.lean
 lake env lean SymbolicLean/Examples/Solvers.lean
 python3 scripts/check_doc_harness.py --mode local --scope core
 ```

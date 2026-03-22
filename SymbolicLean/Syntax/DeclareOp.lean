@@ -5,6 +5,7 @@ import SymbolicLean.Decl.Assumptions
 import SymbolicLean.Syntax.Registry
 import SymbolicLean.SymExpr.Core
 import SymbolicLean.SymExpr.Refined
+import SymbolicLean.Term.Core
 
 namespace SymbolicLean
 
@@ -55,6 +56,59 @@ instance : OpTargetRef (SymSymbol s σ) where
 class OpPayloadDecode (s : SessionTok) (α : Type) where
   decodePayload : Json → SymPyM s α
 
+class IntoPureTerm (α : Type) (σ : outParam SSort) where
+  intoPureTerm : α → Term σ
+
+instance : IntoPureTerm (Term σ) σ where
+  intoPureTerm := id
+
+instance : IntoPureTerm (SymDecl σ) σ where
+  intoPureTerm decl := (decl : Term σ)
+
+instance : IntoPureTerm Nat (.scalar (.ground .ZZ)) where
+  intoPureTerm := Term.natLit
+
+instance : IntoPureTerm Int (.scalar (.ground .ZZ)) where
+  intoPureTerm := Term.intLit
+
+instance : IntoPureTerm Nat (.scalar (.ground .QQ)) where
+  intoPureTerm value := Term.ratLit value
+
+instance : IntoPureTerm Int (.scalar (.ground .QQ)) where
+  intoPureTerm value := Term.ratLit value
+
+instance : IntoPureTerm Rat (.scalar (.ground .QQ)) where
+  intoPureTerm := Term.ratLit
+
+private def malformedPayload (message : String) : SymPyError :=
+  .decode (.malformedPayload message)
+
+private def decodeJsonValueAs [FromJson α] (value : Json) : Except SymPyError α :=
+  match (fromJson? value : Except String α) with
+  | .ok decoded => .ok decoded
+  | .error err => .error <| malformedPayload err
+
+instance (priority := low) {s : SessionTok} [FromJson α] : OpPayloadDecode s α where
+  decodePayload payload :=
+    match decodeJsonValueAs (α := α) payload with
+    | .ok decoded => pure decoded
+    | .error err => throw err
+
+declare_syntax_cat pureHeadArg
+declare_syntax_cat pureHeadOpt
+
+syntax "(" ident " : " term ")" : pureHeadArg
+syntax "call_style " ident : pureHeadOpt
+syntax "sympy_alias" : pureHeadOpt
+syntax "doc " str : pureHeadOpt
+
+syntax "register_op " ident " => " str : command
+syntax "register_op " ident " => " str " doc " str : command
+syntax "declare_pure_head " ident bracketedBinder* " returns " term " => " str pureHeadOpt* : command
+syntax "declare_pure_head " ident bracketedBinder*
+  " for " pureHeadArg+ " returns " term " => " str pureHeadOpt* : command
+syntax "declare_scalar_fn₁ " ident bracketedBinder* " => " str pureHeadOpt* : command
+syntax "declare_scalar_fn₂ " ident bracketedBinder* " => " str pureHeadOpt* : command
 syntax "declare_sympy_op " ident " => " str : command
 syntax "declare_sympy_op " ident " => " str " doc " str : command
 syntax "declare_sympy_op " ident bracketedBinder*
@@ -102,16 +156,39 @@ syntax "declare_head " ident bracketedBinder*
 syntax "declare_head " ident bracketedBinder*
   " for " "(" ident " : " term ")" " returns " term " => " str " doc " str : command
 
+private partial def lastNameComponent : Name → String
+  | .anonymous => ""
+  | .str _ value => value
+  | .num _ value => toString value
+
+private def shortIdentName (name : TSyntax `ident) : Name :=
+  Name.mkSimple <| lastNameComponent name.getId
+
+private def shortIdent (name : TSyntax `ident) : TSyntax `ident :=
+  Lean.mkIdentFrom name <| shortIdentName name
+
 private def mkAuxIdent (base : TSyntax `ident) (suffix : String) : TSyntax `ident :=
-  Lean.mkIdentFrom base <| base.getId.appendAfter suffix
+  Lean.mkIdentFrom base <| (shortIdentName base).appendAfter suffix
 
 private def attachGeneratedDoc (name : TSyntax `ident) (doc? : Option (TSyntax `str)) :
     CommandElabM Unit := do
   match doc? with
   | none => pure ()
   | some docString =>
-      let declName := (← getCurrNamespace) ++ name.getId
+      let declName := (← getCurrNamespace) ++ shortIdentName name
       Lean.addDocStringCore declName docString.getString
+
+private def attachGeneratedDocAt (declName : Name) (doc? : Option (TSyntax `str)) :
+    CommandElabM Unit := do
+  match doc? with
+  | none => pure ()
+  | some docString => Lean.addDocStringCore declName docString.getString
+
+private def backendPathOf (backendName : String) : List String :=
+  backendName.splitOn "." |>.filter (!·.isEmpty)
+
+private def backendLeanNameOf (backendName : String) : Lean.Name :=
+  (backendPathOf backendName).foldl Lean.Name.str Lean.Name.anonymous
 
 private def registerSymbolicDecl
     (kind : RegistryKind)
@@ -119,21 +196,163 @@ private def registerSymbolicDecl
     (backendName : TSyntax `str)
     (dispatchMode : DispatchMode)
     (doc? : Option (TSyntax `str))
+    (callStyle : CallStyle := .call)
+    (pureSpec? : Option PureSpec := none)
+    (extraAliases : List String := [])
     (errorTemplate? : Option String := none) : CommandElabM Unit := do
-  let declName := (← getCurrNamespace) ++ name.getId
+  let declName := (← getCurrNamespace) ++ shortIdentName name
+  let backendName := backendName.getString
   let entry : RegistryEntry := {
     kind := kind
     declName := declName
-    backendName := backendName.getString
+    backendName := backendName
     metadata := {
       dispatchMode := dispatchMode
-      aliases := [backendName.getString]
+      callStyle := callStyle
+      pureSpec? := pureSpec?
+      backendPath := backendPathOf backendName
+      aliases := (backendName :: extraAliases).eraseDups
       categories := [reprStr kind, reprStr dispatchMode]
       docs := doc?.map (·.getString)
       errorTemplate := errorTemplate?
     }
   }
   modifyEnv fun env => addRegistryEntry env entry
+
+private structure PureHeadOptions where
+  callStyle : CallStyle := .call
+  sympyAlias : Bool := false
+  doc? : Option (TSyntax `str) := none
+
+private def parsePureHeadArg (stx : Syntax) : CommandElabM (TSyntax `ident × TSyntax `term) := do
+  match stx with
+  | `(pureHeadArg| ($arg:ident : $argTy:term)) => pure (arg, argTy)
+  | _ => throwUnsupportedSyntax
+
+private def parsePureHeadOptions (opts : Array Syntax) : CommandElabM PureHeadOptions := do
+  let mut parsed : PureHeadOptions := {}
+  for opt in opts do
+    match opt with
+    | `(pureHeadOpt| call_style $style:ident) =>
+        let callStyle ←
+          match style.getId.toString with
+          | "call" => pure CallStyle.call
+          | "attr" => pure CallStyle.attr
+          | other => throwError "unsupported call_style `{other}`; expected `call` or `attr`"
+        parsed := { parsed with callStyle := callStyle }
+    | `(pureHeadOpt| sympy_alias) =>
+        parsed := { parsed with sympyAlias := true }
+    | `(pureHeadOpt| doc $docString:str) =>
+        parsed := { parsed with doc? := some docString }
+    | _ => throwUnsupportedSyntax
+  pure parsed
+
+private def mkExtHeadSchemaTerm (argSorts : Array (TSyntax `term)) (resultSort : TSyntax `term) :
+    MacroM (TSyntax `term) := do
+  `(term| { args := [$argSorts,*], result := $resultSort })
+
+private def mkExtHeadValueTerm (backendName : TSyntax `str) : MacroM (TSyntax `term) := do
+  `(term| { name := backendLeanNameOf $backendName })
+
+private def mkArgsValueTerm (args : List (TSyntax `term)) : MacroM (TSyntax `term) := do
+  match args with
+  | [] => `(term| SymbolicLean.Args.nil)
+  | arg :: rest =>
+      let restTerm ← mkArgsValueTerm rest
+      `(term| SymbolicLean.Args.cons $arg $restTerm)
+
+private def mkPureInputTypeIdent (arg : TSyntax `ident) : TSyntax `ident :=
+  mkAuxIdent arg "Input"
+
+private def elabGeneratedDef
+    (binders : Array Syntax)
+    (name : TSyntax `ident)
+    (argBinders : Array Syntax)
+    (retTy body : TSyntax `term) : CommandElabM Unit := do
+  let binders := binders.map TSyntax.mk
+  let argBinders := argBinders.map TSyntax.mk
+  let name := shortIdent name
+  elabCommand <| ← `(command|
+    def $name $binders* $argBinders* : $retTy := $body)
+
+private def elabGeneratedRootNamespacedDef
+    (ns : Name)
+    (binders : Array Syntax)
+    (name : TSyntax `ident)
+    (argBinders : Array Syntax)
+    (retTy body : TSyntax `term) : CommandElabM Unit := do
+  let binders := binders.map TSyntax.mk
+  let argBinders := argBinders.map TSyntax.mk
+  let targetNs :=
+    if ns == `SymPy then
+      `_root_.SymPy
+    else
+      ns
+  let declIdent := mkIdentFrom name <| targetNs ++ shortIdentName name
+  elabCommand <| ← `(command|
+    def $declIdent $binders* $argBinders* : $retTy := $body)
+
+private def mkClosedPureSpec?
+    (binders : Array Syntax)
+    (argSorts : Array (TSyntax `term))
+    (resultSort : TSyntax `term) : CommandElabM (Option PureSpec) := do
+  let _ := binders
+  let _ := argSorts
+  let _ := resultSort
+  -- `RegistryMetadata.pureSpec?` is reserved for a later manifest-backed reify pass.
+  -- The declaration command still exposes the field now so the schema is stable.
+  return none
+
+private def elabDeclarePureHead
+    (name : TSyntax `ident)
+    (binders : Array Syntax)
+    (argSpecs : Array (TSyntax `ident × TSyntax `term))
+    (resultSort : TSyntax `term)
+    (backendName : TSyntax `str)
+    (options : PureHeadOptions) : CommandElabM Unit := do
+  let schemaTerm ← liftMacroM <| mkExtHeadSchemaTerm (argSpecs.map Prod.snd) resultSort
+  let specValue ← liftMacroM <| mkExtHeadValueTerm backendName
+  let specName := mkAuxIdent name "HeadSpec"
+  let pureSpec? ← mkClosedPureSpec? binders (argSpecs.map Prod.snd) resultSort
+  let extraAliases :=
+    let helperAlias := (shortIdentName name).toString
+    if options.sympyAlias then
+      [helperAlias, s!"SymPy.{helperAlias}"]
+    else
+      [helperAlias]
+  let quotedBinders := binders.map TSyntax.mk
+  elabCommand <| ← `(command|
+    def $specName $quotedBinders* : ExtHeadSpec $schemaTerm := $specValue)
+  let mut argBinders : Array Syntax := #[]
+  let mut argTerms : List (TSyntax `term) := []
+  for (arg, argTy) in argSpecs do
+    let inputTy := mkPureInputTypeIdent arg
+    argBinders := argBinders.push <| ← `(bracketedBinder| {$inputTy : Type})
+    argBinders := argBinders.push <| ← `(bracketedBinder| [IntoPureTerm $inputTy $argTy])
+    argBinders := argBinders.push <| ← `(bracketedBinder| ($arg : $inputTy))
+    let argTerm := mkIdentFrom arg arg.getId
+    let pureArg ← `(term| IntoPureTerm.intoPureTerm (σ := $argTy) $argTerm)
+    argTerms := argTerms.concat pureArg
+  let argsValue ← liftMacroM <| mkArgsValueTerm argTerms
+  let helperBody ← `(term|
+    let spec : ExtHeadSpec $schemaTerm := $specValue
+    SymbolicLean.Term.headApp (.ext spec) $argsValue)
+  elabGeneratedDef binders name argBinders
+    (← `(term| Term $resultSort)) helperBody
+  attachGeneratedDoc name options.doc?
+  if options.sympyAlias then
+    elabGeneratedRootNamespacedDef `SymPy binders name argBinders
+      (← `(term| Term $resultSort)) helperBody
+    attachGeneratedDocAt (`SymPy ++ shortIdentName name) options.doc?
+  registerSymbolicDecl .head name backendName .pureHead options.doc?
+    options.callStyle pureSpec? extraAliases
+
+private def elabRegisterOp
+    (name : TSyntax `ident)
+    (opLiteral : TSyntax `str)
+    (doc? : Option (TSyntax `str)) : CommandElabM Unit := do
+  attachGeneratedDoc name doc?
+  registerSymbolicDecl .op name opLiteral .effectfulOp doc?
 
 private def elabDeclareSympyOp
     (name : TSyntax `ident)
@@ -213,6 +432,12 @@ private def elabDeclareJsonOpWithExtras
   registerSymbolicDecl .op name opLiteral .effectfulOp doc?
 
 macro_rules
+  | `(declare_scalar_fn₁ $name:ident $binders:bracketedBinder* => $backend:str $opts:pureHeadOpt*) =>
+      `(declare_pure_head $name {d : DomainDesc} $binders*
+          for (x : .scalar d) returns (.scalar d) => $backend $opts*)
+  | `(declare_scalar_fn₂ $name:ident $binders:bracketedBinder* => $backend:str $opts:pureHeadOpt*) =>
+      `(declare_pure_head $name {d : DomainDesc} $binders*
+          for (x : .scalar d) (y : .scalar d) returns (.scalar d) => $backend $opts*)
   | `(declare_sympy_op $name:ident => $op:str) =>
       `(declare_sympy_op $name {σ : SSort} for (expr : SymExpr s σ) returns σ => $op)
   | `(declare_sympy_op $name:ident => $op:str doc $docString:str) =>
@@ -235,6 +460,24 @@ elab "declare_sympy_op " name:ident " => " op:str : command => do
   let outSort ← `(term| σ)
   let exprId := Lean.mkIdent `expr
   elabDeclareSympyOp name #[sigmaBinder.raw] exprId argTy outSort op none
+
+elab "register_op " name:ident " => " op:str : command => do
+  elabRegisterOp name op none
+
+elab "register_op " name:ident " => " op:str " doc " docString:str : command => do
+  elabRegisterOp name op (some docString)
+
+elab_rules : command
+  | `(declare_pure_head $name:ident $binders:bracketedBinder*
+      returns $resultSort:term => $backendName:str $opts:pureHeadOpt*) => do
+      let options ← parsePureHeadOptions (opts.map (·.raw))
+      elabDeclarePureHead name (binders.map (·.raw)) #[] resultSort backendName options
+  | `(declare_pure_head $name:ident $binders:bracketedBinder*
+      for $argSpecs:pureHeadArg* returns $resultSort:term => $backendName:str
+      $opts:pureHeadOpt*) => do
+      let args ← (argSpecs.map (·.raw)).mapM parsePureHeadArg
+      let options ← parsePureHeadOptions (opts.map (·.raw))
+      elabDeclarePureHead name (binders.map (·.raw)) args resultSort backendName options
 
 elab "declare_sympy_op " name:ident " => " op:str " doc " docString:str : command => do
   let sigmaBinder ← `(bracketedBinder| {σ : SSort})

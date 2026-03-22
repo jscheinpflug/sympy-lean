@@ -12,9 +12,9 @@ def diffExpr (expr : SymExpr s σ) (x : SymSymbol s (.scalar d)) (order : Nat :=
     SymPyM s (SymExpr s σ) :=
   diffExprCore expr x order
 
-declare_op integrate for (expr : SymExpr s (.scalar d)) (x : SymSymbol s (.scalar d))
+declare_op integrateExpr for (expr : SymExpr s (.scalar d)) (x : SymSymbol s (.scalar d))
   returns (.scalar d) => "integrate"
-  doc "Form a realized indefinite integral over a realized scalar symbol."
+  doc "Ask SymPy to construct the realized indefinite integral of a scalar expression with respect to a realized scalar symbol."
 
 declare_op limitExpr for (expr : SymExpr s (.scalar d)) (x : SymSymbol s (.scalar d))
   (atPoint : SymExpr s (.scalar d)) returns (.scalar d) => "limit"

@@ -1,232 +1,209 @@
-# Plain-Lean Refactor Plan for sympy-lean
+# Production UX and Extensibility Backbone
 
-## Project
+## Overview
 
-`sympy-lean` is a Lean 4 frontend for SymPy with:
+This slice is about turning `sympy-lean` into a production-ready symbolic front end instead of a promising prototype.
 
-- a pure typed expression layer `Term σ`
-- a realized backend layer `SymExpr s σ`
-- a Python worker that evaluates and manipulates expressions in SymPy
+The current architecture already has the right major pieces:
+- typed pure terms in Lean
+- a registry and generated manifest
+- a session-scoped SymPy worker
+- public front-door wrappers
 
-The long-term goal is a scalable typed symbolic interface that feels like ordinary Lean code, not a separate DSL bolted onto Lean.
+The main problem is that these pieces are not yet the full source of truth for one another. In practice:
+- new pure heads still require worker-side special cases
+- reification support is too narrow for new coverage to feel complete
+- some public effectful ops are not registry-backed
+- simple string/JSON-returning ops are harder to add than they should be
+- public naming and examples are not yet consistent enough to feel like a production UX
 
-## Why This Refactor
+This plan fixes those problems in the right order:
+1. make the registry/manifest drive extension and discoverability
+2. make pure-head evaluation and reification generic enough for real coverage growth
+3. make effectful op decoding and public front doors easier to extend
+4. land a first coverage wave that proves the infrastructure works
+5. improve solver/set UX so the current public surface feels complete, not partial
 
-The current design does not scale well:
+## Goals
 
-- `Term` grows by one constructor per SymPy concept
-- `term!` depends on a separate hand-written grammar
-- adding a new SymPy operation requires touching multiple Lean and Python files
-- the public surface exposes internal implementation details like `.ground .QQ`, `.scalar`, and `.static`
+- Make the registry and manifest the single source of truth for extension, worker dispatch, hover/search, and generated public surface.
+- Make adding most new SymPy pure functions declarative instead of multi-file manual work.
+- Improve the public UX so the documented surface feels SymPy-aligned, consistent, and production-ready.
+- Keep the current wrapper shapes mostly intact while shifting canonical docs/examples toward SymPy naming.
+- Land a first coverage wave for scalar special functions, then a small solver/set wave.
 
-The replacement design should make it possible to add most new SymPy concepts by registering metadata once, then generating Lean sugar, Python dispatch, decoding, docs, and completion data from that single source of truth.
+## Scope Of This Slice
 
-## Target Outcome
+- Registry metadata expansion
+- Generic pure-head declaration infrastructure
+- Worker-side generic pure-head evaluation
+- Worker-side targeted generic reification for the newly added public surface
+- Generic JSON/string effectful decode support
+- Public front doors for `solve`, `integrate`, `doit`, `evalf`, and `latex`
+- First scalar special-function coverage wave
+- Minimal set vocabulary for solver UX
+- README, project-guide, mirrored docs, and examples refresh
 
-Real code should use ordinary Lean syntax only. Exploration should use `#sympy`.
+## Public Interface Changes
 
-Desired user experience:
+- Extend `RegistryMetadata` with pure-head dispatch metadata:
+  - `backendPath : List String`
+  - `callStyle : call | attr`
+  - `pureSpec? : Option { args : List SSort, result : SSort }`
+- Add a metadata-only effectful registration command:
+  - `register_op ... => ...`
+- Add a generic pure-head declaration command:
+  - `declare_pure_head ...`
+- Add scalar sugar on top of it:
+  - `declare_scalar_fn₁`
+  - `declare_scalar_fn₂`
+- Add canonical public front doors:
+  - `solve`
+  - `integrate`
+  - `doit`
+  - `evalf`
+  - `latex`
+- Keep existing compatibility wrappers such as `solveUnivariate` in this slice unless they actively block consistency.
+- Add public solver/set constants:
+  - `SymPy.S.Reals`
+  - `SymPy.S.Integers`
 
-```lean
-open SymPy
+## Workstreams
 
-symbols (x : Rat) (M : Mat Rat 2 2)
-functions (f : Rat → Rat)
+### 1. Registry And Manifest As The Backbone
 
-let t : Term (Scalar Rat) := Integral (f x, (x, 0, 1))
-let u : Term (Scalar Rat) := Piecewise ((x, x > 0), (-x, true))
-let v := (x^2 - 1).factor()
-let w := M.T
+- Refactor the declaration machinery so registry registration is a first-class primitive, not just a side effect of `declare_op`.
+- Make every public head and every public effectful op registry-backed.
+- Replace the current `rref` metadata gap with a proper `register_op` path instead of a hand-written unregistered exception.
+- Keep hover/search entirely registry-driven, including docs, aliases, categories, and error templates.
+
+Why:
+- This removes drift between public API, manifest contents, and discoverability.
+- It also gives the worker enough structured information to stop hard-coding extension behavior.
+
+### 2. Generic Pure-Head Declaration Pipeline
+
+- Implement `declare_pure_head` in the syntax/registry layer.
+- `declare_pure_head` must generate:
+  - the registry entry
+  - the typed `ExtHeadSpec`
+  - the Lean term helper
+  - the optional `SymPy.*` alias when requested
+- Build `declare_scalar_fn₁` and `declare_scalar_fn₂` as thin sugar on top of `declare_pure_head`.
+- Keep the existing core arithmetic/logic/calculus constructors unchanged; this slice generalizes extension heads, not core heads.
+
+Why:
+- This is the main extensibility win.
+- After this lands, most new scalar SymPy functions should be declared instead of hand-wired.
+
+### 3. Worker Eval And Reify Generalization
+
+- Replace the current hard-coded “unsupported manifest-dispatched pure head” fallback with registry-driven evaluation in `tools/sympy_worker.py`.
+- Evaluation rules:
+  - `callStyle.call`: resolve `backendPath` and call the target with evaluated args
+  - `callStyle.attr`: resolve the attribute object directly with no call
+- Reification rules in this slice:
+  - required: registered unary/binary scalar call-heads
+  - required: public nullary attribute constants used by solver UX
+  - deferred: broad variadic/set/tensor reification beyond the explicitly added public surface
+- Preserve existing special cases for core heads and structured calculus heads where custom behavior already exists.
+
+Why:
+- Without this, “registered” still does not mean “works”.
+- This is the difference between coverage on paper and coverage that actually evaluates, pretty-prints, and round-trips.
+
+### 4. Effectful Op Framework And Public Front Doors
+
+- Add a generic `OpPayloadDecode` fallback for any `[FromJson α]`.
+- Add explicit decode instances only when `FromJson` is insufficient.
+- Use that path to support `latex` as a string-returning op without bespoke command syntax.
+- Keep custom hand-written bodies only for truly structured results such as `rref`, but require them to register metadata through `register_op`.
+- Add public front doors for:
+  - `integrate`
+  - `doit`
+  - `evalf`
+  - `latex`
+  - `solve`
+- Make `solve` the documented public name for the current finite univariate solve surface, while keeping `solveUnivariate` as a compatibility alias in this slice.
+
+Why:
+- This improves UX immediately.
+- It also removes friction when adding common effectful SymPy operations later.
+
+### 5. First Coverage Wave: Scalar Special Functions
+
+- Add a dedicated pure-head module for special functions and use it as the reference implementation pattern for future coverage.
+- Include:
+  - `sin`, `cos`, `tan`
+  - `asin`, `acos`, `atan`, `atan2`
+  - `sinh`, `cosh`, `tanh`
+  - `exp`, `log`, `sqrt`
+  - `Abs`, `sign`, `floor`, `ceiling`
+  - `re`, `im`, `conjugate`, `arg`
+- Do not add variadic names such as `Max`, `Min`, or `FiniteSet` in this slice.
+
+Why:
+- This is the highest-value first wave for tutorial parity and exploratory UX.
+- It also proves the new pure-head infrastructure on real SymPy coverage, not a toy example.
+
+### 6. Solver And Set UX Follow-Up
+
+- Add the minimal set vocabulary needed for actual `solveset` workflows:
+  - `Interval`
+  - `Union`
+  - `Intersection`
+  - `Complement`
+  - `SymPy.S.Reals`
+  - `SymPy.S.Integers`
+- Build these on the same registry-driven pure-head machinery plus `callStyle.attr`/dotted backend paths.
+- Make `solveset` examples show both `pretty solved.setExpr` and use of the new pure set constants.
+- Treat broader set algebra and variadic set constructors as the next wave, not this slice.
+
+Why:
+- Solver UX is currently readable but not composable.
+- This closes a real user-facing gap without trying to cover all of SymPy’s set system at once.
+
+### 7. Docs, Examples, And Validation
+
+- Every touched `SymbolicLean/**` file must land with its mirrored `/docs` update in the same change.
+- Refresh README and the project guide so the documented canonical surface is:
+  - SymPy-like in naming
+  - valid Lean syntax
+  - explicit about pure constructors vs effectful ops
+- Add one dedicated example module for special functions and one for eval/render ops if the existing files become too noisy.
+- Keep the negative and compile-time type-level examples intact where the new surface affects them.
+
+## Success Criteria
+
+- A new unary or binary scalar SymPy function usually requires one declaration plus docs/examples, not bespoke worker eval code.
+- New pure scalar heads can:
+  - evaluate
+  - pretty-print
+  - reify in the supported slice
+- `rref`, `solve`, `integrate`, `latex`, and the new pure heads all appear in `#sympy_hover` / `#sympy_search`.
+- README and example files use the canonical production surface.
+- Local build, example compilation, runtime examples, and the doc harness all pass.
+
+## Validation Commands
+
+```bash
+lake build SymbolicLean
+lake build SymbolicLean.Examples
+lake env lean SymbolicLean/Examples/Scalars.lean
+lake env lean SymbolicLean/Examples/Matrices.lean
+lake env lean SymbolicLean/Examples/Solvers.lean
+python3 scripts/check_doc_harness.py --mode local --scope core
 ```
 
-Exploration should reuse the same expression language:
+## Deferred
 
-```lean
-#sympy Rat => (x^2 - 1).factor()
-```
+- `Term` constructor collapse
+- Broad variadic pure-head support
+- Broad set/tensor reification beyond the explicitly added public surface
+- Proof-producing or trusted-proof SymPy integration
 
-## Scope
+## Assumptions
 
-### In Scope
-
-- carrier-based public sorts and declaration builders
-- coercions so declared symbols/functions participate naturally in Lean expressions
-- an open typed `headApp` core for extensible symbolic heads
-- a Lean registry that generates syntax-facing declarations, backend manifest data, decoding hooks, docs, and completions
-- generated method/property/namespace sugar
-- structured arguments, dict syntax, indexing, and slicing
-- a manifest-driven Python worker
-- reification, canonicalization, and session-level interning
-- migration of current algebra, calculus, linear-algebra, and solver surfaces onto the new system
-
-### Out of Scope
-
-- mutation-heavy OOP workflows in SymPy physics/mechanics APIs
-- authoring custom SymPy subclasses from Lean
-- code generation APIs as first-class typed syntax
-
-These remain available through lower-level escape hatches rather than first-class typed wrappers.
-
-## Architectural Decisions
-
-### 1. One Public Syntax Surface
-
-- Delete `symterm`, `term!`, and `sympy!`
-- Keep ordinary Lean term syntax for real code
-- Keep `#sympy` as the only exploration entrypoint
-- Use the same symbolic surface in both strict code and exploration
-
-### 2. Carrier-Based Public Surface
-
-Expose public aliases and builders:
-
-- `SymCarrier`
-- `Scalar α`
-- `Mat α m n`
-- `MatD α m n`
-- `Vec α n`
-- `sym`
-- `symWith`
-- `funSym`
-
-Hide raw internal domain/sort constructors from normal public use.
-
-### 3. Open Typed Core
-
-Keep `Term σ` typed, but replace most operator-specific constructors with:
-
-- `CoreHead`
-- `ExtHeadSpec`
-- `Head`
-- `HeadSchema`
-- `Term.headApp`
-
-Atoms, literals, and function application stay primitive. Symbolic heads move to the typed extensible core.
-
-### 4. Generated Views for Internal Code
-
-Dependent core terms should not make the codebase unreadable. Generate:
-
-- `CoreView`
-- `Term.coreView`
-- projector helpers like `asAdd?`, `asIntegral?`, `asPiecewise?`
-
-Encoder, canonicalizer, and reifier should match on these views rather than raw dependent argument packs.
-
-### 5. Registry as Single Source of Truth
-
-Replace narrow wrapper generation with a registry-backed system:
-
-- `declare_head`
-- `declare_op`
-
-Each entry should declare:
-
-- typed argument schema
-- result sort
-- surface role: free call, method, property, or namespace attribute
-- forward dispatch mode
-- reification mode
-- result mode
-- help text
-- custom symbolic error template
-
-### 6. Generated Sugar Instead of a Separate DSL
-
-Use Lean metaprogramming to generate:
-
-- free symbolic heads under `SymPy`
-- extension methods on `Term` and `SymExpr`
-- receiver properties like `.T` and `.I`
-- namespaces like `SymPy.Q` and `SymPy.S`
-
-This keeps one expression language while still covering broad SymPy surface area.
-
-### 7. Structured Arguments and Small Syntax Extensions
-
-Most SymPy surface should use ordinary Lean syntax plus generated elaboration. Only a few syntax forms need project-local support:
-
-- multi-index and slice syntax like `A[i, j]`, `A[:, j]`, `A[i:j]`
-- mapping syntax like `dict{ x ↦ 1, y ↦ 2 }`
-
-Structured SymPy argument groups should use ordinary tuples coerced into schema structs:
-
-- `BoundSpec`
-- `DerivSpec`
-- `PieceBranch`
-- binder tuple wrappers for `Lambda`
-
-### 8. Manifest-Driven Backend
-
-Lean remains the source of truth. The build should generate a versioned manifest consumed by Python at worker startup.
-
-The worker should use that manifest for:
-
-- pure head evaluation
-- effectful op dispatch
-- reification
-- version compatibility checks
-
-### 9. Runtime Semantics
-
-- Lean `Term` values are always unevaluated syntax
-- backend evaluation may return a more canonical SymPy form
-- round-trip correctness is only required modulo Lean canonicalization
-- canonical-equivalent terms should reuse the same remote ref within a session
-
-## `#sympy` Semantics
-
-`#sympy` is the only exploration entrypoint.
-
-Supported forms:
-
-- `#sympy α => expr`
-- `#sympy α do ...`
-
-Behavior:
-
-- opens a temporary session with default scalar carrier `α`
-- uses the same expression language as strict mode
-- unresolved argument-position names become scalar symbols
-- unresolved unqualified call heads may become undefined function symbols
-- unresolved constructor-like or qualified heads should warn and fall back to raw named calls
-- final `Term` results are evaluated and pretty-printed
-- final `SymExpr` results are pretty-printed directly
-- structured results use registered renderers or `repr`
-
-## Migration Strategy
-
-1. Add carrier aliases, builders, and coercions without breaking old code.
-2. Add the typed head system alongside existing constructors.
-3. Add the registry and build-integrated manifest generation.
-4. Make backend encode/decode and Python dispatch work in both old and new paths.
-5. Add the generic symbolic application elaborator plus generated methods/properties.
-6. Redesign `#sympy` on top of the new system.
-7. Add reification, canonicalization, and expression interning.
-8. Remove `symterm`, `term!`, and the old raw public surface once parity is reached.
-
-## Validation Rules
-
-After each coherent batch:
-
-- update mirrored docs for touched source files
-- run `lake build SymbolicLean`
-- run `python3 scripts/check_doc_harness.py --mode local --scope core`
-
-Add focused smoke tests for:
-
-- plain Lean symbolic code
-- method/property elaboration
-- structured argument coercions
-- `#sympy` exploration behavior
-- round-trip reification modulo canonicalization
-- manifest freshness and protocol compatibility
-
-## Acceptance Criteria
-
-- real code uses ordinary Lean syntax only
-- `#sympy` is the only exploration-only syntax surface
-- public examples no longer expose `.ground .QQ`, `.scalar`, or `.static`
-- adding a new registered SymPy head/op usually requires one registry declaration
-- the Python worker uses generated manifest data rather than hand-maintained parallel tables
-- registered pure heads round-trip through `reify(eval(t))` modulo canonicalization
+- Canonical naming should move toward SymPy, but current wrappers should mostly remain available as compatibility aliases in this slice.
+- The current wrapper shapes should not be reshaped broadly unless needed for naming parity or typing.
+- Generic reify support is required only for the new scalar special functions and the small set of public constants introduced for solver UX.

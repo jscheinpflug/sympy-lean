@@ -2,6 +2,23 @@ import SymbolicLean
 
 open SymbolicLean
 
+namespace SymbolicLean.Smoke
+
+example : Term (Scalar Rat) :=
+  let x : SymDecl (Scalar Rat) := sym `x
+  smokeUnary x
+
+example : Term (Scalar Rat) :=
+  let x : SymDecl (Scalar Rat) := sym `x
+  SymPy.smokeUnary x
+
+example : Term (Scalar Rat) :=
+  let x : SymDecl (Scalar Rat) := sym `x
+  let y : SymDecl (Scalar Rat) := sym `y
+  smokeBinary x y
+
+end SymbolicLean.Smoke
+
 private def sameEncodedTerm (lhs rhs : Term σ) : Bool :=
   (encodeTerm lhs).compress == (encodeTerm rhs).compress
 
@@ -144,6 +161,27 @@ example : Term (.map (Scalar Rat) (Scalar Rat)) :=
   | .ok text => IO.println text
   | .error err => IO.println (repr err)
 
+-- Generated pure-head helpers evaluate through the registry-driven worker fallback.
+#eval do
+  let result ← sympy Rat do
+    symbols (x : Rat) (y : Rat)
+    let unaryText ← pretty (Smoke.smokeUnary (x : Term (Scalar Rat)))
+    let binaryText ← pretty (Smoke.smokeBinary (x : Term (Scalar Rat)) (y : Term (Scalar Rat)))
+    pure s!"{unaryText}\n{binaryText}"
+  match result with
+  | .ok text => IO.println text
+  | .error err => IO.println (repr err)
+
+-- String-returning effectful ops can use the generic `[FromJson α]` decode fallback.
+#eval do
+  let result ← sympy Rat do
+    symbols (x : Rat)
+    let realized ← eval (x + 1 : Term (Scalar Rat))
+    Smoke.sreprText realized
+  match result with
+  | .ok text => IO.println text
+  | .error err => IO.println (repr err)
+
 -- Scalar cancellation through the effectful algebra front door.
 #eval do
   let result ← sympy Rat do
@@ -205,6 +243,30 @@ noncomputable section
     let reified ← reify simplified
     let target : Term (Scalar Rat) := 2 * x
     pure (sameEncodedTerm reified target.canonicalize)
+  match result with
+  | .ok ok => IO.println ok
+  | .error err => IO.println (repr err)
+
+-- Generic reification also covers registry-backed unary scalar pure heads after effectful fallback.
+#eval do
+  let result ← sympy Rat do
+    symbols (x : Rat)
+    let term : Term (Scalar Rat) := Smoke.smokeUnary x
+    let simplified ← simplify term
+    let reified ← reify simplified
+    pure (sameEncodedTerm reified term.canonicalize)
+  match result with
+  | .ok ok => IO.println ok
+  | .error err => IO.println (repr err)
+
+-- The same fallback also round-trips registry-backed binary scalar pure heads.
+#eval do
+  let result ← sympy Rat do
+    symbols (x : Rat) (y : Rat)
+    let term : Term (Scalar Rat) := Smoke.smokeBinary x y
+    let simplified ← simplify term
+    let reified ← reify simplified
+    pure (sameEncodedTerm reified term.canonicalize)
   match result with
   | .ok ok => IO.println ok
   | .error err => IO.println (repr err)

@@ -1,11 +1,13 @@
 import SymbolicLean.Backend.Realize
 import SymbolicLean.Ops.Algebra
 import SymbolicLean.Ops.Calculus
+import SymbolicLean.Ops.Evaluation
 import SymbolicLean.Ops.LinearAlgebra
 import SymbolicLean.Ops.Solvers
 import SymbolicLean.Syntax.StructuredArgs
 import SymbolicLean.Term.Calculus
 import SymbolicLean.Term.Logic
+import SymbolicLean.Term.Sets
 import SymbolicLean.Term.Structured
 
 namespace SymbolicLean
@@ -161,6 +163,16 @@ def cancel [IntoSymExpr s α σ] (expr : α) : SymPyM s (SymExpr s σ) := do
 def pretty [IntoSymExpr s α σ] (expr : α) : SymPyM s String := do
   prettyRemote (← IntoSymExpr.intoSymExpr expr).ref
 
+def doit [IntoSymExpr s α σ] (expr : α) : SymPyM s (SymExpr s σ) := do
+  doitExpr (← IntoSymExpr.intoSymExpr expr)
+
+def evalf [IntoSymExpr s α (.scalar d)] (expr : α) (precision : Nat := 15) :
+    SymPyM s (SymExpr s (.scalar d)) := do
+  evalfExpr (← IntoSymExpr.intoSymExpr expr) precision
+
+def latex [IntoSymExpr s α σ] (expr : α) : SymPyM s String := do
+  latexText (← IntoSymExpr.intoSymExpr expr)
+
 def substPair [IntoSymExpr s α σ] [IntoSymExpr s β τ] [SubstCompat σ τ]
     (fromExpr : α) (toExpr : β) : SymPyM s (SubstPair s) := do
   pure
@@ -181,9 +193,17 @@ def subs [IntoSymExpr s α σ]
     (expr : α) (pairs : List (SymPyM s (SubstPair s))) : SymPyM s (SymExpr s σ) := do
   subsExpr (← IntoSymExpr.intoSymExpr expr) (← pairs.mapM id)
 
-def solveUnivariate [IntoSymExpr s α (.scalar d)] [IntoSymSymbol s β (.scalar d)]
+def integrate [IntoSymExpr s α (.scalar d)] [IntoSymSymbol s β (.scalar d)]
+    (expr : α) (x : β) : SymPyM s (SymExpr s (.scalar d)) := do
+  integrateExpr (← IntoSymExpr.intoSymExpr expr) (← IntoSymSymbol.intoSymSymbol x)
+
+def solve [IntoSymExpr s α (.scalar d)] [IntoSymSymbol s β (.scalar d)]
     (expr : α) (x : β) : SymPyM s (FiniteSolve s (.scalar d)) := do
   solveUnivariateExpr (← IntoSymExpr.intoSymExpr expr) (← IntoSymSymbol.intoSymSymbol x)
+
+def solveUnivariate [IntoSymExpr s α (.scalar d)] [IntoSymSymbol s β (.scalar d)]
+    (expr : α) (x : β) : SymPyM s (FiniteSolve s (.scalar d)) := do
+  solve expr x
 
 def solveset [IntoSymExpr s α (.scalar d)] [IntoSymSymbol s β (.scalar d)]
     (expr : α) (x : β) : SymPyM s (SolveSetResult s (.scalar d)) := do
@@ -219,6 +239,16 @@ def rref [IntoSymExpr s α (.matrix d m n)] [DomainCarrier d] [InterpretsField d
 generate_term_symexpr_symdecl_methods pretty {s : SessionTok} {σ : SSort} for (expr : σ)
   returns SymPyM s String => SymbolicLean.pretty expr
 
+generate_term_symexpr_symdecl_methods doit {s : SessionTok} {σ : SSort} for (expr : σ)
+  returns SymPyM s (SymExpr s σ) => SymbolicLean.doit expr
+
+generate_term_symexpr_symdecl_methods latex {s : SessionTok} {σ : SSort} for (expr : σ)
+  returns SymPyM s String => SymbolicLean.latex expr
+
+generate_term_symexpr_symdecl_methods evalf {s : SessionTok} {d : DomainDesc}
+  for (expr : (.scalar d)) (precision : Nat := 15)
+  returns SymPyM s (SymExpr s (.scalar d)) => SymbolicLean.evalf expr precision
+
 generate_term_symexpr_methods simplify {s : SessionTok} {σ : SSort} for (expr : σ)
   returns SymPyM s (SymExpr s σ) => SymbolicLean.simplify expr
 
@@ -251,11 +281,19 @@ generate_term_symexpr_methods subs {s : SessionTok} {σ : SSort} for (expr : σ)
   (pairs : List (SymPyM s (SubstPair s))) returns SymPyM s (SymExpr s σ) =>
     SymbolicLean.subs expr pairs
 
-generate_term_symexpr_methods solveUnivariate {s : SessionTok} {d : DomainDesc} {β : Type}
+generate_term_symexpr_symdecl_methods integrate {s : SessionTok} {d : DomainDesc} {β : Type}
+  [IntoSymSymbol s β (.scalar d)] for (expr : (.scalar d)) (x : β)
+  returns SymPyM s (SymExpr s (.scalar d)) => SymbolicLean.integrate expr x
+
+generate_term_symexpr_symdecl_methods solve {s : SessionTok} {d : DomainDesc} {β : Type}
+  [IntoSymSymbol s β (.scalar d)] for (expr : (.scalar d)) (x : β)
+  returns SymPyM s (FiniteSolve s (.scalar d)) => SymbolicLean.solve expr x
+
+generate_term_symexpr_symdecl_methods solveUnivariate {s : SessionTok} {d : DomainDesc} {β : Type}
   [IntoSymSymbol s β (.scalar d)] for (expr : (.scalar d)) (x : β)
   returns SymPyM s (FiniteSolve s (.scalar d)) => SymbolicLean.solveUnivariate expr x
 
-generate_term_symexpr_methods solveset {s : SessionTok} {d : DomainDesc} {β : Type}
+generate_term_symexpr_symdecl_methods solveset {s : SessionTok} {d : DomainDesc} {β : Type}
   [IntoSymSymbol s β (.scalar d)] for (expr : (.scalar d)) (x : β)
   returns SymPyM s (SolveSetResult s (.scalar d)) => SymbolicLean.solveset expr x
 
@@ -290,6 +328,18 @@ generate_sympy_alias pretty {s : SessionTok} {α : Type} {σ : SSort} [IntoSymEx
   for (expr : α)
   returns SymPyM s String => SymbolicLean.pretty expr
 
+generate_sympy_alias doit {s : SessionTok} {α : Type} {σ : SSort} [IntoSymExpr s α σ]
+  for (expr : α)
+  returns SymPyM s (SymExpr s σ) => SymbolicLean.doit expr
+
+generate_sympy_alias latex {s : SessionTok} {α : Type} {σ : SSort} [IntoSymExpr s α σ]
+  for (expr : α)
+  returns SymPyM s String => SymbolicLean.latex expr
+
+generate_sympy_alias evalf {s : SessionTok} {α : Type} {d : DomainDesc}
+  [IntoSymExpr s α (.scalar d)] for (expr : α) (precision : Nat := 15)
+  returns SymPyM s (SymExpr s (.scalar d)) => SymbolicLean.evalf expr precision
+
 generate_sympy_alias T {s : SessionTok} {α : Type} {d : DomainDesc} {m n : Dim}
   [IntoSymExpr s α (.matrix d m n)] [DomainCarrier d] for (matrix : α)
   returns SymPyM s (SymExpr s (.matrix d n m)) => SymbolicLean.T matrix
@@ -305,6 +355,14 @@ generate_sympy_alias det {s : SessionTok} {α : Type} {d : DomainDesc} {n : Dim}
 generate_sympy_alias rref {s : SessionTok} {α : Type} {d : DomainDesc} {m n : Dim}
   [IntoSymExpr s α (.matrix d m n)] [DomainCarrier d] [InterpretsField d] for (matrix : α)
   returns SymPyM s (RRefResult s d m n) => SymbolicLean.rref matrix
+
+generate_sympy_alias integrate {s : SessionTok} {α : Type} {β : Type} {d : DomainDesc}
+  [IntoSymExpr s α (.scalar d)] [IntoSymSymbol s β (.scalar d)] for (expr : α) (x : β)
+  returns SymPyM s (SymExpr s (.scalar d)) => SymbolicLean.integrate expr x
+
+generate_sympy_alias solve {s : SessionTok} {α : Type} {β : Type} {d : DomainDesc}
+  [IntoSymExpr s α (.scalar d)] [IntoSymSymbol s β (.scalar d)] for (expr : α) (x : β)
+  returns SymPyM s (FiniteSolve s (.scalar d)) => SymbolicLean.solve expr x
 
 generate_sympy_alias Derivative {σ : SSort} {d : DomainDesc}
   for (body : Term σ) (x : SymDecl (.scalar d)) (order : Nat := 1)
@@ -342,5 +400,7 @@ generate_sympy_q_const invertible returns Assumption => .invertible
 
 generate_sympy_s_const true_ returns Term .boolean => SymbolicLean.verum
 generate_sympy_s_const false_ returns Term .boolean => SymbolicLean.falsum
+generate_sympy_s_const Reals returns Term (.set (.scalar (.ground .RR))) => SymbolicLean.Reals
+generate_sympy_s_const Integers returns Term (.set (.scalar (.ground .ZZ))) => SymbolicLean.Integers
 
 end SymbolicLean

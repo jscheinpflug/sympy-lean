@@ -21,6 +21,7 @@ import SymbolicLean.Session.Monad
 import SymbolicLean.Ops.Algebra
 import SymbolicLean.Ops.Calculus
 import SymbolicLean.Ops.Core
+import SymbolicLean.Ops.Evaluation
 import SymbolicLean.Ops.LinearAlgebra
 import SymbolicLean.Ops.Results
 import SymbolicLean.Ops.Solvers
@@ -46,6 +47,9 @@ import SymbolicLean.Term.Arithmetic
 import SymbolicLean.Term.Logic
 import SymbolicLean.Term.Relations
 import SymbolicLean.Term.Calculus
+import SymbolicLean.Term.PureHeadSmoke
+import SymbolicLean.Term.SpecialFunctions
+import SymbolicLean.Term.Sets
 import SymbolicLean.Term.Structured
 import SymbolicLean.Term.Containers
 import SymbolicLean.Term.Application

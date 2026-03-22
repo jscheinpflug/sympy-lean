@@ -8,10 +8,12 @@
 - Smoke-test the `SymPy` namespace aliases that feed into solver-oriented workflows.
 - Smoke-test solver field notation on the public front door.
 - Smoke-test `sympy Rat do` on effectful solver workflows.
+- Smoke-test the minimal pure set vocabulary that complements the current solver UX, including direct `Interval 0 x`-style construction and signed literal bounds in the current rational slice.
 - Smoke-test scoped assumptions through ordinary Lean `assuming [...] do ...`.
 
 ## Public Surface
-- Executable examples for `solveUnivariate`, `solveset`, `dsolve`, `satisfiable`, and `ask`, including `sympy Rat do`, `SymPy.Derivative`, `SymPy.S.true_`, `SymPy.Q.positive`, the `pretty` helper, solver field notation such as `.solveUnivariate`, `.satisfiable`, and `.ask`, and scoped assumptions via `assuming [...] do ...`.
+- Typechecking examples for `SymPy.Interval`, `SymPy.Union`, `SymPy.S.Reals`, and `SymPy.S.Integers`, including signed literal interval bounds.
+- Executable examples for canonical `solve`, compatibility `solveUnivariate`, `solveset`, `dsolve`, `satisfiable`, and `ask`, including `sympy Rat do`, `SymPy.Derivative`, `SymPy.S.true_`, `SymPy.Q.positive`, pure set pretty-printing for symbolic and concrete intervals/unions, solver field notation such as `.solve`, `.satisfiable`, and `.ask`, and scoped assumptions via `assuming [...] do ...`.
 
 ## Change Triggers
 - Solver result containers change.

@@ -97,7 +97,7 @@ declare_op askSymbol for (symbol : SymSymbol s (.scalar d)) (query : Assumption)
 
 declare_op solveUnivariateRefs for (expr : SymExpr s (.scalar d)) (x : SymSymbol s (.scalar d))
   decodes (List Ref) => "solve"
-  doc "Decode the finite list of solution refs returned by SymPy's `solve`."
+  doc "Decode the finite list of solution refs returned by SymPy's univariate `solve` backend."
 
 def solveUnivariateExpr (expr : SymExpr s (.scalar d)) (x : SymSymbol s (.scalar d)) :
     SymPyM s (FiniteSolve s (.scalar d)) := do
@@ -107,7 +107,7 @@ def solveUnivariateExpr (expr : SymExpr s (.scalar d)) (x : SymSymbol s (.scalar
 
 declare_op solvesetExprCore for (expr : SymExpr s (.scalar d)) (x : SymSymbol s (.scalar d))
   returns (.set (.scalar d)) => "solveset"
-  doc "Compute the realized solution set for a scalar equation."
+  doc "Compute the realized solution set for a scalar equation through SymPy's `solveset`."
 
 def solvesetExpr (expr : SymExpr s (.scalar d)) (x : SymSymbol s (.scalar d)) :
     SymPyM s (SolveSetResult s (.scalar d)) := do

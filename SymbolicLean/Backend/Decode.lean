@@ -246,6 +246,9 @@ private def decodeHeadIdentity (json : Json) : Except SymPyError (String × Json
       pure ((← decodeFieldAs json "name"), json)
   | _ => malformedE "headApp head identity must be a string or object"
 
+private def genericExtHeadSpec (headName : String) (schema : HeadSchema) : ExtHeadSpec schema :=
+  { name := Lean.Name.mkSimple headName }
+
 noncomputable section
 
 mutual
@@ -270,6 +273,32 @@ private partial def decodeArgsFor :
   | σ :: σs, json :: jsons => do
       pure <| .cons (← decodeTermAs σ json) (← decodeArgsFor σs jsons)
   | _, _ => malformedE "argument arity mismatch"
+
+private partial def decodeGenericScalarHead
+    (headName : String)
+    (out : DomainDesc)
+    (args : List Json) : Except SymPyError SomeTerm := do
+  match args with
+  | [argJson] =>
+      let ⟨argSort, arg⟩ ← decodeTermAny argJson
+      match argSort with
+      | .scalar d =>
+          let spec :
+              ExtHeadSpec { args := [.scalar d], result := .scalar out } :=
+            genericExtHeadSpec headName _
+          pure ⟨_, .headApp (.ext spec) (.singleton arg)⟩
+      | _ => malformedE s!"headApp {headName} expected scalar operand"
+  | [lhsJson, rhsJson] =>
+      let ⟨lhsSort, lhs⟩ ← decodeTermAny lhsJson
+      let ⟨rhsSort, rhs⟩ ← decodeTermAny rhsJson
+      match lhsSort, rhsSort with
+      | .scalar d₁, .scalar d₂ =>
+          let spec :
+              ExtHeadSpec { args := [.scalar d₁, .scalar d₂], result := .scalar out } :=
+            genericExtHeadSpec headName _
+          pure ⟨_, .headApp (.ext spec) (.pair lhs rhs)⟩
+      | _, _ => malformedE s!"headApp {headName} expected scalar operands"
+  | _ => malformedE s!"headApp {headName} expected one or two scalar operands"
 
 private partial def decodeTermAny (json : Json) : Except SymPyError SomeTerm := do
   let sort ← decodeSort (← getObjVal json "sort")
@@ -419,6 +448,8 @@ private partial def decodeTermAny (json : Json) : Except SymPyError SomeTerm := 
           let value ← decodeTermAs (.scalar d) valueJson
           pure ⟨_, .headApp (.ext (limitHeadSpec d))
             (.cons body (.cons (var : Term (.scalar d)) (.cons value .nil)))⟩
+      | .scalar out, headName, args =>
+          decodeGenericScalarHead headName out args
       | _, _, _ => malformedE s!"unsupported headApp shape for {headName}"
   | σ, "app" =>
       let ⟨fnSort, fn⟩ ← decodeTermAny (← getObjVal json "fn")

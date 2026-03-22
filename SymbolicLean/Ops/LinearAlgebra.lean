@@ -46,7 +46,7 @@ private def rememberRef (ref : Ref) (sort : SSort) : SymPyM s Unit :=
 
 declare_op detExpr {d : DomainDesc} {n : Dim} [DomainCarrier d] [InterpretsCommRing d]
   for (matrix : SymExpr s (.matrix d n n)) returns (.scalar d) => "det"
-  doc "Compute the determinant of a realized square matrix."
+  doc "Compute the determinant of a realized square matrix through SymPy's matrix backend."
 
 declare_op transpose {d : DomainDesc} {m n : Dim} [DomainCarrier d]
   for (matrix : SymExpr s (.matrix d m n)) returns (.matrix d n m) => "transpose"
@@ -54,7 +54,7 @@ declare_op transpose {d : DomainDesc} {m n : Dim} [DomainCarrier d]
 
 declare_op inv {d : DomainDesc} {n : Dim} [DomainCarrier d] [InterpretsField d]
   for (matrix : SymExpr s (.matrix d n n)) returns (.matrix d n n) => "inv"
-  doc "Invert a realized square matrix over a field-like domain."
+  doc "Invert a realized square matrix over a field-like domain using SymPy's matrix inverse."
 
 def rrefExpr [DomainCarrier d] [InterpretsField d] (matrix : SymExpr s (.matrix d m n)) :
     SymPyM s (RRefResult s d m n) := do
@@ -62,5 +62,8 @@ def rrefExpr [DomainCarrier d] [InterpretsField d] (matrix : SymExpr s (.matrix 
   let (reducedRef, pivots) ← liftExcept <| decodeRRefPayload payload
   rememberRef reducedRef (.matrix d m n)
   pure { reduced := { ref := reducedRef }, pivots := pivots }
+
+register_op rrefExpr => "rref"
+  doc "Compute row-reduced echelon form and decode SymPy's structured `[matrixRef, pivots]` payload from `rref`."
 
 end SymbolicLean

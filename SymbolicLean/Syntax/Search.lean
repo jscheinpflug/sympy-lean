@@ -49,16 +49,24 @@ private def exactMatches (needle : String) (entry : RegistryEntry) : Bool :=
 
 private def renderHover (entry : RegistryEntry) : String :=
   let docs := entry.metadata.docs.getD "No attached docs."
+  let backendPath :=
+    match entry.metadata.backendPath with
+    | [] => "none"
+    | xs => String.intercalate "." xs
   let aliases :=
     match entry.metadata.aliases with
     | [] => "none"
     | xs => String.intercalate ", " xs
   let categories :=
     match entry.metadata.categories with
-    | [] => "none"
-    | xs => String.intercalate ", " xs
+      | [] => "none"
+      | xs => String.intercalate ", " xs
   let errorTemplate := entry.metadata.errorTemplate.getD "none"
-  s!"{entry.declName}\nkind: {reprStr entry.kind}\nbackend: {entry.backendName}\naliases: {aliases}\ncategories: {categories}\ndispatch: {reprStr entry.metadata.dispatchMode}\nreify: {reprStr entry.metadata.reifyMode}\nresult: {reprStr entry.metadata.resultMode}\nerrorTemplate: {errorTemplate}\n{docs}"
+  let pureSpec :=
+    match entry.metadata.pureSpec? with
+    | some spec => reprStr spec
+    | none => "none"
+  s!"{entry.declName}\nkind: {reprStr entry.kind}\nbackend: {entry.backendName}\nbackendPath: {backendPath}\ncallStyle: {reprStr entry.metadata.callStyle}\npureSpec: {pureSpec}\naliases: {aliases}\ncategories: {categories}\ndispatch: {reprStr entry.metadata.dispatchMode}\nreify: {reprStr entry.metadata.reifyMode}\nresult: {reprStr entry.metadata.resultMode}\nerrorTemplate: {errorTemplate}\n{docs}"
 
 private def renderCompletion (entry : RegistryEntry) : String :=
   let aliasSuffix :=

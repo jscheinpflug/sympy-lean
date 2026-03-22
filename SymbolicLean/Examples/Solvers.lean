@@ -2,12 +2,29 @@ import SymbolicLean
 
 open SymbolicLean
 
+example : Term (.set (Scalar Rat)) :=
+  let x : SymDecl (Scalar Rat) := sym `x
+  SymPy.Interval 0 x
+
+example : Term (.set (Scalar Rat)) :=
+  let x : SymDecl (Scalar Rat) := sym `x
+  SymPy.Union (SymPy.Interval 0 x) (SymPy.Interval 1 2)
+
+example : Term (.set (.scalar (.ground .RR))) :=
+  SymPy.S.Reals
+
+example : Term (.set (.scalar (.ground .ZZ))) :=
+  SymPy.S.Integers
+
+example : Term (.set (Scalar Rat)) :=
+  SymPy.Interval (-1 : Int) 1
+
 -- Solve a scalar polynomial equation as a finite solve.
 #eval do
   let result ← sympy Rat do
     symbols (x : Rat)
     let expr : Term (Scalar Rat) := x ^ 2 - 1
-    let solved ← solveUnivariate expr x
+    let solved ← solve expr x
     match solved.solutions with
     | solution :: _ => IO.println (← pretty solution)
     | [] => IO.println "[]"
@@ -31,12 +48,23 @@ open SymbolicLean
   let result ← sympy Rat do
     symbols (x : Rat)
     let expr : Term (Scalar Rat) := x ^ 2 - 1
-    let solved ← expr.solveUnivariate x
+    let solved ← expr.solve x
     match solved.solutions with
     | solution :: _ => IO.println (← pretty solution)
     | [] => IO.println "[]"
   match result with
   | .ok _ => pure ()
+  | .error err => IO.println (repr err)
+
+-- The compatibility alias remains available while `solve` becomes the canonical front door.
+#eval do
+  let result ← sympy Rat do
+    symbols (x : Rat)
+    let expr : Term (Scalar Rat) := x ^ 2 - 1
+    let solved ← solveUnivariate expr x
+    pure solved.solutions.length
+  match result with
+  | .ok n => IO.println n
   | .error err => IO.println (repr err)
 
 -- Solve a first-order ODE from pure declarations.
@@ -63,6 +91,27 @@ open SymbolicLean
     IO.println (repr answer)
   match result with
   | .ok _ => pure ()
+  | .error err => IO.println (repr err)
+
+-- Pure set vocabulary is available alongside the realized solver result surface.
+#eval do
+  let result ← sympy Rat do
+    let intervalText ← pretty (SymPy.Interval 0 1)
+    let realsText ← pretty (SymPy.S.Reals : Term (.set (.scalar (.ground .RR))))
+    pure s!"{intervalText}\n{realsText}"
+  match result with
+  | .ok text => IO.println text
+  | .error err => IO.println (repr err)
+
+-- Symbolic interval and union constructors stay usable inside solver-oriented sessions.
+#eval do
+  let result ← sympy Rat do
+    symbols (x : Rat)
+    let intervalText ← pretty (SymPy.Interval 0 x)
+    let unionText ← pretty (SymPy.Union (SymPy.Interval (-1 : Int) 0) (SymPy.Interval 1 2))
+    pure s!"{intervalText}\n{unionText}"
+  match result with
+  | .ok text => IO.println text
   | .error err => IO.println (repr err)
 
 -- Assumption scopes shadow declarations with additional `Q.*` facts inside ordinary Lean `do`.

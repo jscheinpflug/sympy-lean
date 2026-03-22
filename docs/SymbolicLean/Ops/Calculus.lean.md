@@ -6,11 +6,11 @@
 ## Responsibilities
 - Define the registry-backed effectful calculus operations over realized `SymExpr` values.
 - Keep differentiation variables explicit as realized scalar symbols.
-- Keep the effectful calculus names distinct from the pure term constructors where the namespace would otherwise collide.
+- Keep the raw realized calculus names distinct from the canonical public front-door names exported by `Ops/Core`.
 
 ## Public Surface
 - `diffExpr`
-- `integrate`
+- `integrateExpr`
 - `limitExpr`
 - `seriesExpr`
 
