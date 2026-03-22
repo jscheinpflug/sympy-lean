@@ -6,7 +6,7 @@
 ## Responsibilities
 - Define the root library module for `SymbolicLean`.
 - Aggregate the public foundation modules for declarations, backend transport, domains, sorts, sessions, runtime handles, and pure terms.
-- Aggregate the public evaluation/render op layer plus the special-function and set pure-head modules.
+- Aggregate the public evaluation/render op layer plus the special-function, set, and pure linear-algebra head modules.
 - Re-export the public carrier-based sort alias layer.
 
 ## Public Surface
@@ -43,6 +43,7 @@
 - [`SymbolicLean/Syntax/Subst.lean.md`](SymbolicLean/Syntax/Subst.lean.md)
 - [`SymbolicLean/Term/Core.lean.md`](SymbolicLean/Term/Core.lean.md)
 - [`SymbolicLean/Term/PureHeadSmoke.lean.md`](SymbolicLean/Term/PureHeadSmoke.lean.md)
+- [`SymbolicLean/Term/LinearAlgebra.lean.md`](SymbolicLean/Term/LinearAlgebra.lean.md)
 - [`SymbolicLean/Term/SpecialFunctions.lean.md`](SymbolicLean/Term/SpecialFunctions.lean.md)
 - [`SymbolicLean/Term/Sets.lean.md`](SymbolicLean/Term/Sets.lean.md)
 - [`SymbolicLean/Term/Head.lean.md`](SymbolicLean/Term/Head.lean.md)

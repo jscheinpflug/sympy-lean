@@ -8,12 +8,14 @@
 - Keep the realized-only matrix ops separate from the broader front-door wrappers exported elsewhere.
 - Enforce the field-only matrix constraints for inversion and row reduction at the Lean type level.
 - Decode SymPy's structured `rref` result into a typed Lean container.
-- Register the hand-written `rrefExpr` decoder in the symbolic registry so it participates in manifest-driven discoverability.
-- Keep the registry-visible matrix op docs aligned with the public `det`, `I`, and `rref` front doors.
+- Reuse the shared `(Ref × α)` effectful-payload decode path for the `[matrixRef, pivots]` worker payload.
+- Register the hand-written `rrefExpr` decoder in the symbolic registry so it participates in manifest-driven discoverability, including `result_mode structured`.
+- Keep the registry-visible matrix op docs aligned with the public `det`, `trace`, `I`, and `rref` front doors.
 
 ## Public Surface
 - `RRefResult`
 - `detExpr`
+- `traceExpr`
 - `inv`
 - `rrefExpr`
 

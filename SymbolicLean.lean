@@ -49,6 +49,7 @@ import SymbolicLean.Term.Relations
 import SymbolicLean.Term.Calculus
 import SymbolicLean.Term.PureHeadSmoke
 import SymbolicLean.Term.SpecialFunctions
+import SymbolicLean.Term.LinearAlgebra
 import SymbolicLean.Term.Sets
 import SymbolicLean.Term.Structured
 import SymbolicLean.Term.Containers

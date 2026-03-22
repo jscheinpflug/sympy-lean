@@ -11,6 +11,11 @@ require mathlib from git
 @[default_target]
 lean_lib SymbolicLean
 
+lean_lib SymbolicLeanExamples where
+  srcDir := "."
+  roots := #[`SymbolicLean.Examples]
+  extraDepTargets := #[`sympyManifest]
+
 @[default_target]
 lean_exe «symbolic-lean» where
   root := `Main

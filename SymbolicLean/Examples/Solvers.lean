@@ -2,6 +2,12 @@ import SymbolicLean
 
 open SymbolicLean
 
+#sympy_hover "FiniteSet"
+#sympy_hover "Reals"
+
+private def sameEncodedTerm (lhs rhs : Term σ) : Bool :=
+  (encodeTerm lhs).compress == (encodeTerm rhs).compress
+
 example : Term (.set (Scalar Rat)) :=
   let x : SymDecl (Scalar Rat) := sym `x
   SymPy.Interval 0 x
@@ -9,6 +15,11 @@ example : Term (.set (Scalar Rat)) :=
 example : Term (.set (Scalar Rat)) :=
   let x : SymDecl (Scalar Rat) := sym `x
   SymPy.Union (SymPy.Interval 0 x) (SymPy.Interval 1 2)
+
+example : Term (.set (Scalar Rat)) :=
+  let x : SymDecl (Scalar Rat) := sym `x
+  let y : SymDecl (Scalar Rat) := sym `y
+  SymPy.FiniteSet ([x, y, (1 : Term (Scalar Rat))] : List (Term (Scalar Rat)))
 
 example : Term (.set (.scalar (.ground .RR))) :=
   SymPy.S.Reals
@@ -109,9 +120,49 @@ example : Term (.set (Scalar Rat)) :=
     symbols (x : Rat)
     let intervalText ← pretty (SymPy.Interval 0 x)
     let unionText ← pretty (SymPy.Union (SymPy.Interval (-1 : Int) 0) (SymPy.Interval 1 2))
-    pure s!"{intervalText}\n{unionText}"
+    let finiteText ←
+      pretty (SymPy.FiniteSet ([x, (1 : Term (Scalar Rat)), 2] : List (Term (Scalar Rat))))
+    pure s!"{intervalText}\n{unionText}\n{finiteText}"
   match result with
   | .ok text => IO.println text
+  | .error err => IO.println (repr err)
+
+noncomputable section
+
+-- Generic reification now also covers set-returning extension call heads.
+#eval do
+  let result ← sympy Rat do
+    symbols (x : Rat)
+    let term : Term (.set (Scalar Rat)) := SymPy.Interval 0 x
+    let simplified ← simplify term
+    let reified ← reify simplified
+    pure (sameEncodedTerm reified term.canonicalize)
+  match result with
+  | .ok ok => IO.println ok
+  | .error err => IO.println (repr err)
+
+-- Nullary `S.*` attr constants round-trip through the same manifest-driven reify path.
+#eval do
+  let result ← sympy Rat do
+    let term : Term (.set (.scalar (.ground .RR))) := SymPy.S.Reals
+    let simplified ← simplify term
+    let reified ← reify simplified
+    pure (sameEncodedTerm reified term.canonicalize)
+  match result with
+  | .ok ok => IO.println ok
+  | .error err => IO.println (repr err)
+
+-- Homogeneous variadic set constructors also round-trip through the generic reify path.
+#eval do
+  let result ← sympy Rat do
+    symbols (x : Rat)
+    let term : Term (.set (Scalar Rat)) :=
+      SymPy.FiniteSet ([x, (1 : Term (Scalar Rat)), 2] : List (Term (Scalar Rat)))
+    let simplified ← simplify term
+    let reified ← reify simplified
+    pure (sameEncodedTerm reified term.canonicalize)
+  match result with
+  | .ok ok => IO.println ok
   | .error err => IO.println (repr err)
 
 -- Assumption scopes shadow declarations with additional `Q.*` facts inside ordinary Lean `do`.
@@ -124,3 +175,5 @@ example : Term (.set (Scalar Rat)) :=
   match result with
   | .ok _ => pure ()
   | .error err => IO.println (repr err)
+
+end

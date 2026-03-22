@@ -28,6 +28,8 @@ inductive ReifyMode where
   | deferred
   deriving Repr, Inhabited, BEq, Hashable, ToJson
 
+-- `ResultMode` stays intentionally coarse: it is a discoverability/runtime-classification signal
+-- for the manifest, while the precise transport-level shape still lives in `OpPayloadDecode`.
 inductive ResultMode where
   | direct
   | transformed
@@ -39,9 +41,52 @@ inductive CallStyle where
   | attr
   deriving Repr, Inhabited, BEq, Hashable, ToJson
 
+inductive EffectfulDispatch where
+  | method
+  | namespace
+  deriving Repr, Inhabited, BEq, Hashable, ToJson
+
+inductive PureParamKind where
+  | sort
+  | domain
+  | dim
+  deriving Repr, Inhabited, BEq, Hashable, ToJson
+
+structure PureParam where
+  name : String
+  kind : PureParamKind
+  deriving Repr, Inhabited, BEq, Hashable, ToJson
+
+inductive PureDomainSpec where
+  | concrete : DomainDesc → PureDomainSpec
+  | var : String → PureDomainSpec
+  | fracField : PureDomainSpec → PureDomainSpec
+  deriving Repr, Inhabited, BEq, Hashable, ToJson
+
+inductive PureDimSpec where
+  | concrete : Dim → PureDimSpec
+  | var : String → PureDimSpec
+  deriving Repr, Inhabited, BEq, Hashable, ToJson
+
+inductive PureSortSpec where
+  | boolean
+  | var : String → PureSortSpec
+  | scalar : PureDomainSpec → PureSortSpec
+  | matrix : PureDomainSpec → PureDimSpec → PureDimSpec → PureSortSpec
+  | tensor : PureDomainSpec → List PureDimSpec → PureSortSpec
+  | set : PureSortSpec → PureSortSpec
+  | tuple : List PureSortSpec → PureSortSpec
+  | seq : PureSortSpec → PureSortSpec
+  | map : PureSortSpec → PureSortSpec → PureSortSpec
+  | fn : List PureSortSpec → PureSortSpec → PureSortSpec
+  | relation : RelKind → List PureSortSpec → PureSortSpec
+  deriving Repr, Inhabited, BEq, Hashable, ToJson
+
 structure PureSpec where
-  args : List SSort
-  result : SSort
+  params : List PureParam := []
+  args : List PureSortSpec
+  variadic? : Option PureSortSpec := none
+  result : PureSortSpec
   deriving Repr, ToJson
 
 structure RegistryMetadata where
@@ -51,6 +96,7 @@ structure RegistryMetadata where
   resultMode : ResultMode := .direct
   backendPath : List String := []
   callStyle : CallStyle := .call
+  effectfulDispatch? : Option EffectfulDispatch := none
   pureSpec? : Option PureSpec := none
   aliases : List String := []
   categories : List String := []

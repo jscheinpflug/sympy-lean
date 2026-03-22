@@ -8,6 +8,7 @@
 - Offer plain-Lean capitalized builders for structured symbolic heads such as `Derivative`, `Integral`, `Limit`, `Sum`, `Product`, `Lambda`, and `Piecewise`.
 - Centralize named-argument splitting and error routing for the symbolic call surface.
 - Accept both raw structured specs and the simpler tuple/decl forms supported by the structured-argument conversion layer.
+- Let `Limit` and `Piecewise` reuse the ordinary scalar/general `IntoTerm` conversions so literal endpoints and fallbacks do not need explicit `Term` ascriptions.
 
 ## Public Surface
 - `symcall% name(...)`

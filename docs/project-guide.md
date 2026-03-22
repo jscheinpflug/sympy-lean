@@ -130,6 +130,7 @@ Main docs:
 - [Term/Relations](SymbolicLean/Term/Relations.lean.md)
 - [Term/Calculus](SymbolicLean/Term/Calculus.lean.md)
 - [Term/SpecialFunctions](SymbolicLean/Term/SpecialFunctions.lean.md)
+- [Term/LinearAlgebra](SymbolicLean/Term/LinearAlgebra.lean.md)
 - [Term/Sets](SymbolicLean/Term/Sets.lean.md)
 - [Term/Structured](SymbolicLean/Term/Structured.lean.md)
 - [Term/Containers](SymbolicLean/Term/Containers.lean.md)
@@ -139,7 +140,7 @@ Main docs:
 Purpose:
 - define the pure typed AST,
 - provide ordinary operator instances so `x + y`, `A * v`, and `f x` work directly on declarations,
-- represent structured symbolic heads such as bounded integrals, sums, products, lambdas, piecewise terms, indexing, and dictionaries,
+- represent structured symbolic heads such as bounded integrals, sums, products, lambdas, piecewise terms, indexing, dictionaries, variadic scalar heads like `Min` / `Max`, and pure matrix/set heads like `Trace` / `FiniteSet`,
 - normalize internal shapes through `Term.coreView` and projector helpers,
 - canonicalize terms for session-local cache reuse.
 
@@ -160,7 +161,7 @@ Purpose:
 - provide `symbols` and `functions` binder sugar,
 - define `sympy Rat do ...` and exploratory `#sympy Rat => ...` commands,
 - expose the capitalized structured builders `Derivative`, `Integral`, `Sum`, `Product`, `Lambda`, `Piecewise`, and `Limit`,
-- support tuple-shaped structured arguments through `IntoBoundSpec`, `IntoDerivSpec`, and `IntoPieceBranch`,
+- support tuple-shaped structured arguments through `IntoBoundSpec`, `IntoDerivSpec`, and `IntoPieceBranch`, including symbolic or literal scalar bounds via the shared `IntoScalarTerm` path,
 - provide substitution, indexing, slicing, dictionary, and scoped-assumption syntax.
 
 This layer is intentionally thin. Its job is to lower convenient syntax onto the real declaration, term, and operation layers.
@@ -213,7 +214,7 @@ Main docs:
 
 Purpose:
 - define low-level realized operations over `SymExpr`,
-- define raw evaluation/rendering operations such as `doit`, `evalf`, and `latex`,
+- define raw evaluation/rendering operations such as `doit`, `evalf`, `latex`, realized differentiation, and matrix trace,
 - decode structured payloads such as finite solves, solver models, and `rref`,
 - lift those realized operations onto pure declarations and terms through `IntoSymExpr`, `IntoSymSymbol`, and `IntoSymFun`,
 - export the public `SymPy.*` namespace aliases and Lean field-notation wrappers.
@@ -394,6 +395,10 @@ And through the `SymPy` namespace:
 
 ### 5. Calculus and structured symbolic heads
 
+These capitalized forms are pure symbolic builders. For ordinary computation or rendering, the
+recommended public workflow is the eager front-door layer such as `integrate`, `solve`, `doit`,
+`evalf`, and `latex`; use the builders when you intentionally want an unevaluated typed `Term`.
+
 #### Derivative
 
 SymPy:
@@ -432,14 +437,14 @@ Lean:
 ```lean
 example : Term (Scalar Rat) :=
   let x : SymDecl (Scalar Rat) := sym `x
-  Integral (x ^ 2) (x, (0 : Term (Scalar Rat)), (1 : Term (Scalar Rat)))
+  Integral (x ^ 2) (x, 0, 1)
 ```
 
 Lean, `SymPy` alias:
 ```lean
 example : Term (Scalar Rat) :=
   let x : SymDecl (Scalar Rat) := sym `x
-  SymPy.Integral (x ^ 2) (x, (0 : Term (Scalar Rat)), (1 : Term (Scalar Rat)))
+  SymPy.Integral (x ^ 2) (x, 0, 1)
 ```
 
 #### Sum and product
@@ -456,11 +461,11 @@ Lean:
 ```lean
 example : Term (Scalar Rat) :=
   let x : SymDecl (Scalar Rat) := sym `x
-  Sum x (x, (0 : Term (Scalar Rat)), (3 : Term (Scalar Rat)))
+  Sum x (x, 0, 3)
 
 example : Term (Scalar Rat) :=
   let x : SymDecl (Scalar Rat) := sym `x
-  Product x (x, (1 : Term (Scalar Rat)), (3 : Term (Scalar Rat)))
+  Product x (x, 1, 3)
 ```
 
 #### Limit, lambda, and piecewise
@@ -478,7 +483,7 @@ Lean:
 ```lean
 example : Term (Scalar Rat) :=
   let x : SymDecl (Scalar Rat) := sym `x
-  Limit (((x ^ 2) - 1) / (x - 1)) x (1 : Term (Scalar Rat))
+  Limit (((x ^ 2) - 1) / (x - 1)) x 1
 
 example : Term (.fn [Scalar Rat] (Scalar Rat)) :=
   let x : SymDecl (Scalar Rat) := sym `x
@@ -486,7 +491,7 @@ example : Term (.fn [Scalar Rat] (Scalar Rat)) :=
 
 example : Term (Scalar Rat) :=
   let x : SymDecl (Scalar Rat) := sym `x
-  Piecewise (x, gt (x : Term (Scalar Rat)) (0 : Term (Scalar Rat))) (0 : Term (Scalar Rat))
+  Piecewise (x, gt x 0) 0
 ```
 
 For generic structured calls, `symcall%` gives a registry-backed escape hatch that still builds typed `Term`s:
@@ -495,8 +500,8 @@ For generic structured calls, `symcall%` gives a registry-backed escape hatch th
 example : Term .boolean :=
   let x : SymDecl (Scalar Rat) := sym `x
   symcall% and(
-    gt (x : Term (Scalar Rat)) (0 : Term (Scalar Rat)),
-    ge (x : Term (Scalar Rat)) (0 : Term (Scalar Rat))
+    gt x 0,
+    ge x 0
   )
 ```
 
@@ -739,9 +744,21 @@ example : Term (.map (Scalar Rat) (Scalar Rat)) :=
   dict{ x ↦ 1, y ↦ 2 }
 ```
 
+The current safe mixed-division slice also covers rational literals on either side:
+
+```lean
+example : Term (Scalar Rat) :=
+  let x : SymDecl (Scalar Rat) := sym `x
+  x / 2
+
+example : Term (Scalar Rat) :=
+  let x : SymDecl (Scalar Rat) := sym `x
+  (1 : Rat) / x
+```
+
 ### 9. Realization, caching, and reification
 
-The `eval` / `reify` boundary is central to the design.
+The `realize` / `reify` boundary is the intended public story. `eval` remains the lower-level primitive underneath it.
 
 Lean:
 ```lean
@@ -749,8 +766,8 @@ Lean:
   let result ← sympy Rat do
     symbols (x : Rat)
     let lhsTerm : Term (Scalar Rat) := x + 0
-    let lhs ← eval lhsTerm
-    let rhs ← eval (x : Term (Scalar Rat))
+    let lhs ← realize lhsTerm
+    let rhs ← realize (x : Term (Scalar Rat))
     pure (lhs.ref.ident == rhs.ref.ident)
   match result with
   | .ok reused => IO.println reused
@@ -768,7 +785,7 @@ noncomputable section
     symbols (x : Rat)
     let simplified ← simplify (x + x)
     let reified ← reify simplified
-    let roundTrip ← eval reified
+    let roundTrip ← realize reified
     pretty roundTrip
   match result with
   | .ok text => IO.println text

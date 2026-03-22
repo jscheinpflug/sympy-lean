@@ -7,7 +7,7 @@
 - Pin representative compile-time rejection cases with `#guard_msgs`.
 
 ## Public Surface
-- Negative examples for dimension mismatch, non-field inversion, invalid differentiation variables, removed `term!`, rejected raw-domain binder syntax, unresolved qualified-head fallback warnings, and worker startup version mismatches.
+- Negative examples for dimension mismatch, non-field inversion, invalid differentiation variables, removed `term!`, rejected raw-domain binder syntax, missing implicit real-literal coercions, unresolved qualified-head fallback warnings, and worker startup version mismatches.
 
 ## Change Triggers
 - Error surfaces or failure modes change.

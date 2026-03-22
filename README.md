@@ -24,7 +24,7 @@ The project is deliberately narrow:
   - `#sympy Rat => ...`
   - `Derivative`, `Integral`, `Sum`, `Product`, `Lambda`, `Piecewise`, `Limit`
   - substitution, indexing, slicing, dictionaries, and scoped assumptions
-- Round-trip bridges through `eval`, `reify`, and `pretty`
+- Round-trip bridges through `realize`, `reify`, and `pretty`
 - Canonical effectful front doors such as `solve`, `integrate`, `doit`, `evalf`, and `latex`
 
 ## Quick Examples
@@ -56,10 +56,10 @@ Lean:
 SymPy:
 
 ```python
-from sympy import atan2, exp, log, symbols
+from sympy import Min, atan2, exp, log, symbols
 x, y = symbols("x y")
 
-exp(x) + log(x + 1) + atan2(x, y)
+exp(x) + log(x + 1) + atan2(x, y) + Min(1, x, y)
 ```
 
 Lean:
@@ -68,7 +68,8 @@ Lean:
 example : Term (Scalar Rat) :=
   let x : SymDecl (Scalar Rat) := sym `x
   let y : SymDecl (Scalar Rat) := sym `y
-  SymPy.exp x + SymPy.log ((x : Term (Scalar Rat)) + 1) + SymPy.atan2 x y
+  SymPy.exp x + SymPy.log (x + 1) + SymPy.atan2 x y +
+    SymPy.Min ([x, y, (1 : Term (Scalar Rat))] : List (Term (Scalar Rat)))
 ```
 
 ### Polynomial factorization
@@ -152,10 +153,11 @@ Lean:
 SymPy:
 
 ```python
-from sympy import Interval, Q, ask, symbols
+from sympy import FiniteSet, Interval, Q, ask, symbols
 x = symbols("x", positive=True)
 
 Interval(0, x)
+FiniteSet(1, x)
 ask(Q.positive(x))
 ```
 
@@ -166,8 +168,9 @@ Lean:
   let result ← sympy Rat do
     symbols (x : Rat | positive)
     let intervalText ← pretty (SymPy.Interval 0 x)
+    let finiteText ← pretty (SymPy.FiniteSet ([x, (1 : Term (Scalar Rat))] : List (Term (Scalar Rat))))
     let answer ← x.ask SymPy.Q.positive
-    pure s!"{intervalText}\n{repr answer}"
+    pure s!"{intervalText}\n{finiteText}\n{repr answer}"
   match result with
   | .ok text => IO.println text
   | .error err => IO.println (repr err)
@@ -178,9 +181,9 @@ Lean:
 SymPy:
 
 ```python
-from sympy import Integral, latex, symbols
+from sympy import integrate, latex, symbols
 x = symbols("x")
-latex(Integral(x**2, x).doit())
+latex(integrate(x**2, x))
 ```
 
 Lean:
@@ -189,9 +192,8 @@ Lean:
 #eval do
   let result ← sympy Rat do
     symbols (x : Rat)
-    let term : Term (Scalar Rat) := SymPy.Integral (x ^ 2) x
-    let evaluated ← term.doit
-    latex evaluated
+    let integrated ← integrate (x ^ 2 : Term (Scalar Rat)) x
+    latex integrated
   match result with
   | .ok text => IO.println text
   | .error err => IO.println (repr err)
@@ -207,8 +209,7 @@ noncomputable section
 #eval do
   let result ← sympy Rat do
     symbols (x : Rat)
-    let term : Term (Scalar Rat) := SymPy.Integral (((x : Term (Scalar Rat)) ^ 2) + 1) x
-    let evaluated ← term.doit
+    let evaluated ← integrate (x ^ 2 + 1 : Term (Scalar Rat)) x
     let rendered ← latex evaluated
     let reified ← reify evaluated
     let prettyText ← pretty reified

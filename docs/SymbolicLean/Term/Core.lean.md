@@ -7,6 +7,8 @@
 - Define pure symbolic atoms, heterogeneous argument lists, and the typed `Term` AST.
 - Keep the pure expression layer separate from runtime handles and backend effects.
 - Keep scalar mixed-domain constructors gated by `UnifyDomain`.
+- Provide the general `IntoTerm` conversion class used by pure builder surfaces that accept already-typed inputs such as `Term` and `SymDecl`.
+- Provide small `Args` helpers for fixed-arity and homogeneous variadic extension-head construction.
 
 ## Public Surface
 - `Atom`
@@ -16,8 +18,10 @@
 - `Atom.ofFun`
 - coercion from `SymDecl σ` to `Term σ`
 - coercion from `FunDecl args ret` to `Term (.fn args ret)`
+- `IntoTerm`
 - `Args.singleton`
 - `Args.pair`
+- `Args.ofHomogeneousList`
 
 ## Change Triggers
 - Pure term constructors change.

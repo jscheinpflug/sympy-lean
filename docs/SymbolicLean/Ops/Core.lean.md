@@ -6,6 +6,7 @@
 ## Responsibilities
 - Define the thin front-door conversion layer between pure declarations/terms and realized operation APIs.
 - Accept pure declarations and small scalar literals directly where the public op layer expects realized expressions.
+- Provide `realize` as the canonical public helper for crossing from pure declarations/terms into realized `SymExpr` values, with `eval` remaining the lower-level backend primitive.
 - Generate the front-door wrappers that back type-namespaced Lean field notation for unary methods, multi-argument methods, receiver properties, and pure `SymPy` heads.
 - Carry those method/property-style wrappers across algebra, calculus, evaluation/render, linear algebra, solver, and minimal set-facing front-door APIs.
 - Generate the scoped `SymPy`, `SymPy.Q`, and `SymPy.S` namespace surface so short names do not leak into the global namespace.
@@ -16,6 +17,7 @@
 - `IntoSymExpr`
 - `IntoSymSymbol`
 - `IntoSymFun`
+- `realize`
 - `substPair`
 - `substTermPair`
 - `subs`
@@ -28,6 +30,7 @@
 - `evalf`
 - `latex`
 - `integrate`
+- `differentiate`
 - `solve`
 - `solveUnivariate`
 - `solveset`
@@ -37,8 +40,10 @@
 - `T`
 - `I`
 - `det`
+- `trace`
 - `rref`
 - `SymPy.pretty`
+- `SymPy.realize`
 - `SymPy.doit`
 - `SymPy.evalf`
 - `SymPy.latex`
@@ -47,10 +52,12 @@
 - `SymPy.expand`
 - `SymPy.cancel`
 - `SymPy.integrate`
+- `SymPy.differentiate`
 - `SymPy.solve`
 - `SymPy.T`
 - `SymPy.I`
 - `SymPy.det`
+- `SymPy.trace`
 - `SymPy.rref`
 - `SymPy.Derivative`
 - `SymPy.Integral`
@@ -63,39 +70,48 @@
 - `SymPy.S.false_`
 - `SymPy.S.Reals`
 - `SymPy.S.Integers`
+- `Term.realize`
 - `Term.pretty`
 - `Term.doit`
 - `Term.evalf`
 - `Term.latex`
 - `Term.integrate`
+- `Term.differentiate`
 - `Term.solve`
 - `Term.det`
+- `Term.trace`
 - `Term.rref`
 - `Term.solveUnivariate`
 - `Term.solveset`
 - `Term.dsolve`
 - `Term.satisfiable`
+- `SymExpr.realize`
 - `SymExpr.pretty`
 - `SymExpr.doit`
 - `SymExpr.evalf`
 - `SymExpr.latex`
 - `SymExpr.integrate`
+- `SymExpr.differentiate`
 - `SymExpr.solve`
 - `SymExpr.det`
+- `SymExpr.trace`
 - `SymExpr.rref`
 - `SymExpr.solveUnivariate`
 - `SymExpr.solveset`
 - `SymExpr.dsolve`
 - `SymExpr.satisfiable`
+- `SymDecl.realize`
 - `SymDecl.pretty`
 - `SymDecl.doit`
 - `SymDecl.evalf`
 - `SymDecl.latex`
 - `SymDecl.integrate`
+- `SymDecl.differentiate`
 - `SymDecl.solve`
 - `SymDecl.solveUnivariate`
 - `SymDecl.solveset`
 - `SymDecl.det`
+- `SymDecl.trace`
 - `SymDecl.rref`
 - `SymDecl.ask`
 

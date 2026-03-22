@@ -4,6 +4,10 @@ open SymbolicLean
 
 #sympy_hover "rref"
 #sympy_hover "solve"
+#sympy_hover "satisfiable"
+#sympy_hover "ask"
+#sympy_hover "Smoke.latexModeText"
+#sympy_hover "differentiate"
 #sympy_search "latex"
 
 example {s : SessionTok} (x : SymDecl (Scalar Rat)) : SymPyM s String :=
@@ -22,7 +26,17 @@ example {s : SessionTok} (x : SymExpr s (Scalar Rat)) : SymPyM s (SymExpr s (Sca
   | .ok text => IO.println text
   | .error err => IO.println (repr err)
 
--- `doit` forces evaluation of unevaluated pure calculus constructors.
+-- `differentiate` is the eager front door for realized differentiation.
+#eval do
+  let result ← sympy Rat do
+    symbols (x : Rat)
+    let derived ← differentiate (x ^ 3 : Term (Scalar Rat)) x 2
+    pretty derived
+  match result with
+  | .ok text => IO.println text
+  | .error err => IO.println (repr err)
+
+-- `doit` remains available when the workflow intentionally starts from a pure builder.
 #eval do
   let result ← sympy Rat do
     symbols (x : Rat)
@@ -51,14 +65,45 @@ example {s : SessionTok} (x : SymExpr s (Scalar Rat)) : SymPyM s (SymExpr s (Sca
   | .ok text => IO.println text
   | .error err => IO.println (repr err)
 
+-- Dotted namespace dispatch also works through the manifest-driven effectful path.
+#eval do
+  let result ← sympy Rat do
+    symbols (x : Rat)
+    let realized ← realize (x + 1 : Term (Scalar Rat))
+    Smoke.sreprDottedText realized
+  match result with
+  | .ok text => IO.println text
+  | .error err => IO.println (repr err)
+
+-- Method dispatch with keyword arguments uses the same manifest-driven path.
+#eval do
+  let result ← sympy Rat do
+    symbols (x : Rat)
+    let term : Term (Scalar Rat) := SymPy.Integral (x ^ 2) x
+    let realized ← realize term
+    let shallow ← Smoke.doitShallowExpr realized
+    pretty shallow
+  match result with
+  | .ok text => IO.println text
+  | .error err => IO.println (repr err)
+
+-- Namespace dispatch with keyword arguments uses the same manifest-driven path.
+#eval do
+  let result ← sympy Rat do
+    symbols (x : Rat)
+    let realized ← realize (x ^ 2 + 1 : Term (Scalar Rat))
+    SymbolicLean.Smoke.latexModeText realized "plain"
+  match result with
+  | .ok text => IO.println text
+  | .error err => IO.println (repr err)
+
 noncomputable section
 
 -- Evaluation results can be rendered and then reified back into typed pure terms.
 #eval do
   let result ← sympy Rat do
     symbols (x : Rat)
-    let term : Term (Scalar Rat) := SymPy.Integral (((x : Term (Scalar Rat)) ^ 2) + 1) x
-    let evaluated ← term.doit
+    let evaluated ← integrate (x ^ 2 + 1 : Term (Scalar Rat)) x
     let rendered ← latex evaluated
     let reified ← reify evaluated
     let prettyText ← pretty reified

@@ -21,12 +21,16 @@ structure SubstPair (s : SessionTok) where
   toExpr : SymExpr s toSort
 
 declare_op simplifyExpr => "simplify" doc "Apply SymPy's `simplify` to a realized expression."
+register_op simplifyExpr => "simplify" dispatch_namespace
 
 declare_op factorExpr => "factor" doc "Factor a realized expression with SymPy."
+register_op factorExpr => "factor" dispatch_namespace
 
 declare_op expandExpr => "expand" doc "Expand a realized expression with SymPy."
+register_op expandExpr => "expand" dispatch_namespace
 
 declare_op cancelExpr => "cancel" doc "Cancel common factors in a realized expression."
+register_op cancelExpr => "cancel" dispatch_namespace
 
 private def encodeSubstPairs (pairs : List (SubstPair s)) : Json :=
   Json.arr <| pairs.toArray.map fun pair =>
@@ -34,6 +38,7 @@ private def encodeSubstPairs (pairs : List (SubstPair s)) : Json :=
 
 declare_op subsExprJson {σ : SSort} for (expr : SymExpr s σ) (pairs : Json) returns σ => "subs"
   doc "Substitute a list of realized expression pairs into a realized expression."
+register_op subsExprJson => "subs" dispatch_method
 
 def subsExpr (expr : SymExpr s σ) (pairs : List (SubstPair s)) : SymPyM s (SymExpr s σ) := do
   subsExprJson expr (encodeSubstPairs pairs)

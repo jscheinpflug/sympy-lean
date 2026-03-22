@@ -19,9 +19,6 @@ example : Term (Scalar Rat) :=
 
 end SymbolicLean.Smoke
 
-private def sameEncodedTerm (lhs rhs : Term σ) : Bool :=
-  (encodeTerm lhs).compress == (encodeTerm rhs).compress
-
 example : Term (Scalar Rat) :=
   let x : SymDecl (Scalar Rat) := sym `x
   let y : SymDecl (Scalar Rat) := sym `y
@@ -54,7 +51,7 @@ example : DerivSpec (Scalar Rat) (carrierDomain Rat) :=
 
 example : PieceBranch (Scalar Rat) :=
   let x : SymDecl (Scalar Rat) := sym `x
-  (x, gt (x : Term (Scalar Rat)) (0 : Term (Scalar Rat)))
+  (x, gt x 0)
 
 example : Term (Scalar Rat) :=
   let x : SymDecl (Scalar Rat) := sym `x
@@ -62,27 +59,52 @@ example : Term (Scalar Rat) :=
 
 example : Term (Scalar Rat) :=
   let x : SymDecl (Scalar Rat) := sym `x
-  Integral (x ^ 2) (x, (0 : Term (Scalar Rat)), (1 : Term (Scalar Rat)))
+  Integral (x ^ 2) (x, 0, 1)
 
 example : Term (Scalar Rat) :=
   let x : SymDecl (Scalar Rat) := sym `x
-  SymPy.Integral (x ^ 2) (x, (0 : Term (Scalar Rat)), (1 : Term (Scalar Rat)))
+  let a : SymDecl (Scalar Rat) := sym `a
+  let b : SymDecl (Scalar Rat) := sym `b
+  Integral (x ^ 2) (x, a, b)
 
 example : Term (Scalar Rat) :=
   let x : SymDecl (Scalar Rat) := sym `x
-  Sum x (x, (0 : Term (Scalar Rat)), (3 : Term (Scalar Rat)))
+  SymPy.Integral (x ^ 2) (x, 0, 1)
 
 example : Term (Scalar Rat) :=
   let x : SymDecl (Scalar Rat) := sym `x
-  SymPy.Sum x (x, (0 : Term (Scalar Rat)), (3 : Term (Scalar Rat)))
+  let a : SymDecl (Scalar Rat) := sym `a
+  let b : SymDecl (Scalar Rat) := sym `b
+  SymPy.Integral (x ^ 2) (x, a, b)
 
 example : Term (Scalar Rat) :=
   let x : SymDecl (Scalar Rat) := sym `x
-  Product x (x, (1 : Term (Scalar Rat)), (3 : Term (Scalar Rat)))
+  Sum x (x, 0, 3)
 
 example : Term (Scalar Rat) :=
   let x : SymDecl (Scalar Rat) := sym `x
-  SymPy.Product x (x, (1 : Term (Scalar Rat)), (3 : Term (Scalar Rat)))
+  let n : SymDecl (Scalar Rat) := sym `n
+  Sum x (x, n)
+
+example : Term (Scalar Rat) :=
+  let x : SymDecl (Scalar Rat) := sym `x
+  SymPy.Sum x (x, 0, 3)
+
+example : Term (Scalar Rat) :=
+  let x : SymDecl (Scalar Rat) := sym `x
+  Product x (x, 1, 3)
+
+example : Term (Scalar Rat) :=
+  let x : SymDecl (Scalar Rat) := sym `x
+  SymPy.Product x (x, 1, 3)
+
+example : Term (Scalar Rat) :=
+  let x : SymDecl (Scalar Rat) := sym `x
+  Limit (((x ^ 2) - 1) / (x - 1)) x 1
+
+example : Term (Scalar Rat) :=
+  let x : SymDecl (Scalar Rat) := sym `x
+  SymPy.Limit (((x ^ 2) - 1) / (x - 1)) x 1
 
 example : Term (.fn [Scalar Rat] (Scalar Rat)) :=
   let x : SymDecl (Scalar Rat) := sym `x
@@ -90,16 +112,31 @@ example : Term (.fn [Scalar Rat] (Scalar Rat)) :=
 
 example : Term (Scalar Rat) :=
   let x : SymDecl (Scalar Rat) := sym `x
-  Piecewise (x, gt (x : Term (Scalar Rat)) (0 : Term (Scalar Rat))) (0 : Term (Scalar Rat))
+  Piecewise (x, gt x 0) 0
 
 example : Term (Scalar Rat) :=
   let x : SymDecl (Scalar Rat) := sym `x
-  SymPy.Piecewise (x, gt (x : Term (Scalar Rat)) (0 : Term (Scalar Rat))) (0 : Term (Scalar Rat))
+  SymPy.Piecewise (x, gt x 0) 0
 
 example : Term .boolean :=
   let x : SymDecl (Scalar Rat) := sym `x
-  symcall% and(gt (x : Term (Scalar Rat)) (0 : Term (Scalar Rat)),
-    ge (x : Term (Scalar Rat)) (0 : Term (Scalar Rat)))
+  symcall% and(gt x 0, ge x 0)
+
+example : Term .boolean :=
+  let x : SymDecl (Scalar Rat) := sym `x
+  lt 0 x
+
+example : Term .boolean :=
+  let x : SymDecl (Scalar Rat) := sym `x
+  eq_ x 0
+
+example : Term (Scalar Rat) :=
+  let x : SymDecl (Scalar Rat) := sym `x
+  x / 2
+
+example : Term (Scalar Rat) :=
+  let x : SymDecl (Scalar Rat) := sym `x
+  (1 : Rat) / x
 
 example : Term (Scalar Rat) :=
   let A : SymDecl (Mat Rat 2 2) := sym `A
@@ -127,158 +164,3 @@ example : Term (.map (Scalar Rat) (Scalar Rat)) :=
   symbols (x : Rat)
   let term : Term (Scalar Rat) := x + 1
   pure term
-
--- Scalar factorization over pure declarations in ordinary Lean syntax.
-#eval do
-  let result ← sympy Rat do
-    symbols (x : Rat) (y : Rat)
-    let expr : Term (Scalar Rat) := x ^ 2 + 2 * x * y + y ^ 2
-    let factored ← factor expr
-    pretty factored
-  match result with
-  | .ok text => IO.println text
-  | .error err => IO.println (repr err)
-
--- Term field notation routes through the public op front door.
-#eval do
-  let result ← sympy Rat do
-    symbols (x : Rat)
-    let expr : Term (Scalar Rat) := x ^ 2 - 1
-    let factored ← expr.factor
-    pretty factored
-  match result with
-  | .ok text => IO.println text
-  | .error err => IO.println (repr err)
-
--- `SymPy` namespace wrappers reuse the same public symbolic surface.
-#eval do
-  let result ← sympy Rat do
-    symbols (x : Rat)
-    let derived : Term (Scalar Rat) := SymPy.Derivative (x ^ 2) x
-    let simplified ← SymPy.simplify derived
-    pretty simplified
-  match result with
-  | .ok text => IO.println text
-  | .error err => IO.println (repr err)
-
--- Generated pure-head helpers evaluate through the registry-driven worker fallback.
-#eval do
-  let result ← sympy Rat do
-    symbols (x : Rat) (y : Rat)
-    let unaryText ← pretty (Smoke.smokeUnary (x : Term (Scalar Rat)))
-    let binaryText ← pretty (Smoke.smokeBinary (x : Term (Scalar Rat)) (y : Term (Scalar Rat)))
-    pure s!"{unaryText}\n{binaryText}"
-  match result with
-  | .ok text => IO.println text
-  | .error err => IO.println (repr err)
-
--- String-returning effectful ops can use the generic `[FromJson α]` decode fallback.
-#eval do
-  let result ← sympy Rat do
-    symbols (x : Rat)
-    let realized ← eval (x + 1 : Term (Scalar Rat))
-    Smoke.sreprText realized
-  match result with
-  | .ok text => IO.println text
-  | .error err => IO.println (repr err)
-
--- Scalar cancellation through the effectful algebra front door.
-#eval do
-  let result ← sympy Rat do
-    symbols (x : Rat)
-    let expr : Term (Scalar Rat) := (x ^ 2 - 1) / (x - 1)
-    let canceled ← cancel expr
-    pretty canceled
-  match result with
-  | .ok text => IO.println text
-  | .error err => IO.println (repr err)
-
--- Canonical-equivalent scalar terms reuse the same remote ref.
-#eval do
-  let result ← sympy Rat do
-    symbols (x : Rat)
-    let lhsTerm : Term (Scalar Rat) := x + 0
-    let lhs ← eval lhsTerm
-    let rhs ← eval (x : Term (Scalar Rat))
-    pure (lhs.ref.ident == rhs.ref.ident)
-  match result with
-  | .ok reused => IO.println reused
-  | .error err => IO.println (repr err)
-
-noncomputable section
-
--- Round-trip reification matches canonicalization for pure arithmetic and relation heads.
-#eval do
-  let result ← sympy Rat do
-    symbols (x : Rat) (y : Rat)
-    let lhs : Term (Scalar Rat) := x + 0
-    let rhs : Term (Scalar Rat) := y + 0
-    let term : Term .boolean := gt lhs rhs
-    let realized ← eval term
-    let reified ← reify realized
-    pure (sameEncodedTerm reified term.canonicalize)
-  match result with
-  | .ok ok => IO.println ok
-  | .error err => IO.println (repr err)
-
--- Round-trip reification also preserves unevaluated calculus heads such as integrals.
-#eval do
-  let result ← sympy Rat do
-    symbols (x : Rat)
-    let body : Term (Scalar Rat) := x ^ 2 + 0
-    let term : Term (Scalar Rat) := SymPy.Integral body
-      (x, (0 : Term (Scalar Rat)), (1 : Term (Scalar Rat)))
-    let realized ← eval term
-    let reified ← reify realized
-    pure (sameEncodedTerm reified term.canonicalize)
-  match result with
-  | .ok ok => IO.println ok
-  | .error err => IO.println (repr err)
-
--- Reification also works for effectful algebra results once the worker knows the output sort.
-#eval do
-  let result ← sympy Rat do
-    symbols (x : Rat)
-    let simplified ← simplify (x + x)
-    let reified ← reify simplified
-    let target : Term (Scalar Rat) := 2 * x
-    pure (sameEncodedTerm reified target.canonicalize)
-  match result with
-  | .ok ok => IO.println ok
-  | .error err => IO.println (repr err)
-
--- Generic reification also covers registry-backed unary scalar pure heads after effectful fallback.
-#eval do
-  let result ← sympy Rat do
-    symbols (x : Rat)
-    let term : Term (Scalar Rat) := Smoke.smokeUnary x
-    let simplified ← simplify term
-    let reified ← reify simplified
-    pure (sameEncodedTerm reified term.canonicalize)
-  match result with
-  | .ok ok => IO.println ok
-  | .error err => IO.println (repr err)
-
--- The same fallback also round-trips registry-backed binary scalar pure heads.
-#eval do
-  let result ← sympy Rat do
-    symbols (x : Rat) (y : Rat)
-    let term : Term (Scalar Rat) := Smoke.smokeBinary x y
-    let simplified ← simplify term
-    let reified ← reify simplified
-    pure (sameEncodedTerm reified term.canonicalize)
-  match result with
-  | .ok ok => IO.println ok
-  | .error err => IO.println (repr err)
-
-end
-
--- Substitution sugar lowers to the ordinary typed substitution path.
-#eval do
-  let result ← sympy Rat do
-    symbols (x : Rat) (y : Rat)
-    let substituted ← (x + y)[x ↦ 2, y ↦ 3]
-    pretty substituted
-  match result with
-  | .ok text => IO.println text
-  | .error err => IO.println (repr err)

@@ -7,8 +7,10 @@
 - Provide small literal helpers for common scalar domains.
 - Bridge ordinary Lean numerals onto the public scalar carrier aliases that map to existing core literals.
 - Keep literal convenience out of the core `Term` definition file.
+- Define `IntoScalarTerm` as the scalar-specialized pure-term conversion layer used when the target domain matters for literals and mixed scalar builders.
 
 ## Public Surface
+- `IntoScalarTerm`
 - `zz`
 - `qq`
 - `instOfNatZZTerm`

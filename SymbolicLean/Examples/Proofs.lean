@@ -21,30 +21,33 @@ example :
 
 example :
     let x : SymDecl (Scalar Rat) := sym `x
-    SymPy.Integral (x ^ 2) (x, (0 : Term (Scalar Rat)), (1 : Term (Scalar Rat))) =
-      Integral (x ^ 2) (x, (0 : Term (Scalar Rat)), (1 : Term (Scalar Rat))) := by
+    SymPy.Integral (x ^ 2) (x, 0, 1) = Integral (x ^ 2) (x, 0, 1) := by
   rfl
 
 example :
     let x : SymDecl (Scalar Rat) := sym `x
-    SymPy.Sum (x : Term (Scalar Rat)) (x, (0 : Term (Scalar Rat)), (3 : Term (Scalar Rat))) =
-      Sum (x : Term (Scalar Rat)) (x, (0 : Term (Scalar Rat)), (3 : Term (Scalar Rat))) := by
+    SymPy.Sum x (x, 0, 3) = Sum x (x, 0, 3) := by
   rfl
 
 example :
     let x : SymDecl (Scalar Rat) := sym `x
-    SymPy.Product (x : Term (Scalar Rat)) (x, (1 : Term (Scalar Rat)), (3 : Term (Scalar Rat))) =
-      Product (x : Term (Scalar Rat)) (x, (1 : Term (Scalar Rat)), (3 : Term (Scalar Rat))) := by
+    SymPy.Product x (x, 1, 3) = Product x (x, 1, 3) := by
   rfl
 
 example :
     let x : SymDecl (Scalar Rat) := sym `x
-    SymPy.Piecewise (x, gt (x : Term (Scalar Rat)) (0 : Term (Scalar Rat))) (0 : Term (Scalar Rat)) =
-      Piecewise (x, gt (x : Term (Scalar Rat)) (0 : Term (Scalar Rat))) (0 : Term (Scalar Rat)) := by
+    SymPy.Limit (((x ^ 2) - 1) / (x - 1)) x 1 =
+      Limit (((x ^ 2) - 1) / (x - 1)) x 1 := by
   rfl
 
 example :
     let x : SymDecl (Scalar Rat) := sym `x
-    let predicate : Term .boolean := gt (SymPy.Derivative (x ^ 2) x) (0 : Term (Scalar Rat))
-    predicate = gt (diff (x ^ 2) x 1) (0 : Term (Scalar Rat)) := by
+    SymPy.Piecewise (x, gt x 0) 0 =
+      Piecewise (x, gt x 0) 0 := by
+  rfl
+
+example :
+    let x : SymDecl (Scalar Rat) := sym `x
+    let predicate : Term .boolean := gt (SymPy.Derivative (x ^ 2) x) 0
+    predicate = gt (diff (x ^ 2) x 1) 0 := by
   rfl

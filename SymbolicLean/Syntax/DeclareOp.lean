@@ -23,11 +23,28 @@ instance : OpArgEncode Nat where
 instance : OpArgEncode Int where
   encode := toJson
 
+instance : OpArgEncode Bool where
+  encode := toJson
+
 instance : OpArgEncode String where
   encode := toJson
 
 instance : OpArgEncode Json where
   encode := id
+
+structure OpKwArg where
+  name : String
+  value : Json
+
+def opKwArg [OpArgEncode α] (name : String) (value : α) : OpKwArg :=
+  { name := name, value := OpArgEncode.encode value }
+
+def encodeKwArgs (kwargs : List OpKwArg) : Json :=
+  Json.mkObj <| kwargs.map fun kw => (kw.name, kw.value)
+
+structure OpJsonRef where
+  ref : Nat
+  deriving FromJson
 
 instance : OpArgEncode Assumption where
   encode
@@ -57,6 +74,7 @@ class OpPayloadDecode (s : SessionTok) (α : Type) where
   decodePayload : Json → SymPyM s α
 
 class IntoPureTerm (α : Type) (σ : outParam SSort) where
+  -- Narrow pure-input conversion used by generated registry-backed extension-head helpers.
   intoPureTerm : α → Term σ
 
 instance : IntoPureTerm (Term σ) σ where
@@ -80,33 +98,88 @@ instance : IntoPureTerm Int (.scalar (.ground .QQ)) where
 instance : IntoPureTerm Rat (.scalar (.ground .QQ)) where
   intoPureTerm := Term.ratLit
 
-private def malformedPayload (message : String) : SymPyError :=
+def malformedPayload (message : String) : SymPyError :=
   .decode (.malformedPayload message)
 
-private def decodeJsonValueAs [FromJson α] (value : Json) : Except SymPyError α :=
+def liftDecodeExcept (result : Except SymPyError α) : SymPyM s α :=
+  match result with
+  | .ok value => pure value
+  | .error err => throw err
+
+def decodeJsonValueAs [FromJson α] (value : Json) : Except SymPyError α :=
   match (fromJson? value : Except String α) with
   | .ok decoded => .ok decoded
   | .error err => .error <| malformedPayload err
 
+def decodeEmbeddedRef (value : Json) : Except SymPyError Ref := do
+  let decoded : OpJsonRef ← decodeJsonValueAs value
+  pure { ident := decoded.ref }
+
+def decodeEmbeddedRefList (value : Json) : Except SymPyError (List Ref) := do
+  let decoded : List OpJsonRef ← decodeJsonValueAs value
+  pure <| decoded.map fun entry => { ident := entry.ref }
+
+def decodeJsonArray2 (value : Json) : Except SymPyError (Json × Json) := do
+  match value with
+  | .arr values =>
+      match values.toList with
+      | [lhs, rhs] => pure (lhs, rhs)
+      | _ => .error <| malformedPayload "expected JSON array of length 2"
+  | _ => .error <| malformedPayload "expected JSON array"
+
+def rememberLiveRef (ref : Ref) (sort : SSort) : SymPyM s Unit :=
+  modify fun st => { st with liveRefs := st.liveRefs.insert ref sort }
+
+def rememberLiveRefs (refs : List Ref) (sort : SSort) : SymPyM s Unit :=
+  modify fun st =>
+    let liveRefs := refs.foldl (fun acc ref => acc.insert ref sort) st.liveRefs
+    { st with liveRefs := liveRefs }
+
+def variadicHeadApp
+    (headName : Lean.Name)
+    (argSort resultSort : SSort)
+    (args : List (Term argSort)) : Term resultSort :=
+  let spec : ExtHeadSpec { args := List.replicate args.length argSort, result := resultSort } :=
+    { name := headName }
+  Term.headApp (.ext spec) (Args.ofHomogeneousList args)
+
 instance (priority := low) {s : SessionTok} [FromJson α] : OpPayloadDecode s α where
   decodePayload payload :=
-    match decodeJsonValueAs (α := α) payload with
-    | .ok decoded => pure decoded
-    | .error err => throw err
+    liftDecodeExcept <| decodeJsonValueAs (α := α) payload
+
+instance {s : SessionTok} : OpPayloadDecode s Ref where
+  decodePayload payload := liftDecodeExcept <| decodeEmbeddedRef payload
+
+instance {s : SessionTok} : OpPayloadDecode s (List Ref) where
+  decodePayload payload := liftDecodeExcept <| decodeEmbeddedRefList payload
+
+instance {s : SessionTok} [FromJson α] : OpPayloadDecode s (Ref × α) where
+  decodePayload payload := do
+    let (refJson, valueJson) ← liftDecodeExcept <| decodeJsonArray2 payload
+    let ref ← liftDecodeExcept <| decodeEmbeddedRef refJson
+    let value : α ← liftDecodeExcept <| decodeJsonValueAs valueJson
+    pure (ref, value)
 
 declare_syntax_cat pureHeadArg
 declare_syntax_cat pureHeadOpt
+declare_syntax_cat effectfulOpOpt
 
 syntax "(" ident " : " term ")" : pureHeadArg
 syntax "call_style " ident : pureHeadOpt
 syntax "sympy_alias" : pureHeadOpt
 syntax "doc " str : pureHeadOpt
+syntax "dispatch_method" : effectfulOpOpt
+syntax "dispatch_namespace" : effectfulOpOpt
+syntax "call_style " ident : effectfulOpOpt
+syntax "result_mode " ident : effectfulOpOpt
+syntax "doc " str : effectfulOpOpt
 
-syntax "register_op " ident " => " str : command
-syntax "register_op " ident " => " str " doc " str : command
+syntax "register_op " ident " => " str effectfulOpOpt* : command
 syntax "declare_pure_head " ident bracketedBinder* " returns " term " => " str pureHeadOpt* : command
 syntax "declare_pure_head " ident bracketedBinder*
   " for " pureHeadArg+ " returns " term " => " str pureHeadOpt* : command
+syntax "declare_variadic_pure_head " ident bracketedBinder*
+  " for " "(" ident " : " term ")" " returns " term " => " str pureHeadOpt* : command
 syntax "declare_scalar_fn₁ " ident bracketedBinder* " => " str pureHeadOpt* : command
 syntax "declare_scalar_fn₂ " ident bracketedBinder* " => " str pureHeadOpt* : command
 syntax "declare_sympy_op " ident " => " str : command
@@ -197,10 +270,14 @@ private def registerSymbolicDecl
     (dispatchMode : DispatchMode)
     (doc? : Option (TSyntax `str))
     (callStyle : CallStyle := .call)
+    (effectfulDispatch? : Option EffectfulDispatch := none)
+    (resultMode? : Option ResultMode := none)
     (pureSpec? : Option PureSpec := none)
     (extraAliases : List String := [])
     (errorTemplate? : Option String := none) : CommandElabM Unit := do
   let declName := (← getCurrNamespace) ++ shortIdentName name
+  let previous? := findRegistryEntry? (← getEnv) declName
+  let previousMetadata? := previous?.map RegistryEntry.metadata
   let backendName := backendName.getString
   let entry : RegistryEntry := {
     kind := kind
@@ -209,12 +286,15 @@ private def registerSymbolicDecl
     metadata := {
       dispatchMode := dispatchMode
       callStyle := callStyle
-      pureSpec? := pureSpec?
+      resultMode := resultMode?.getD <| previousMetadata?.map RegistryMetadata.resultMode |>.getD .direct
+      effectfulDispatch? := effectfulDispatch? <|> previousMetadata?.bind RegistryMetadata.effectfulDispatch?
+      pureSpec? := pureSpec? <|> previousMetadata?.bind RegistryMetadata.pureSpec?
       backendPath := backendPathOf backendName
-      aliases := (backendName :: extraAliases).eraseDups
+      aliases := ((previousMetadata?.map RegistryMetadata.aliases |>.getD []) ++
+        backendName :: extraAliases).eraseDups
       categories := [reprStr kind, reprStr dispatchMode]
-      docs := doc?.map (·.getString)
-      errorTemplate := errorTemplate?
+      docs := doc?.map (·.getString) <|> previousMetadata?.bind RegistryMetadata.docs
+      errorTemplate := errorTemplate? <|> previousMetadata?.bind RegistryMetadata.errorTemplate
     }
   }
   modifyEnv fun env => addRegistryEntry env entry
@@ -222,6 +302,12 @@ private def registerSymbolicDecl
 private structure PureHeadOptions where
   callStyle : CallStyle := .call
   sympyAlias : Bool := false
+  doc? : Option (TSyntax `str) := none
+
+private structure EffectfulOpOptions where
+  callStyle? : Option CallStyle := none
+  effectfulDispatch? : Option EffectfulDispatch := none
+  resultMode? : Option ResultMode := none
   doc? : Option (TSyntax `str) := none
 
 private def parsePureHeadArg (stx : Syntax) : CommandElabM (TSyntax `ident × TSyntax `term) := do
@@ -243,6 +329,36 @@ private def parsePureHeadOptions (opts : Array Syntax) : CommandElabM PureHeadOp
     | `(pureHeadOpt| sympy_alias) =>
         parsed := { parsed with sympyAlias := true }
     | `(pureHeadOpt| doc $docString:str) =>
+        parsed := { parsed with doc? := some docString }
+    | _ => throwUnsupportedSyntax
+  pure parsed
+
+private def parseEffectfulOpOptions (opts : Array Syntax) : CommandElabM EffectfulOpOptions := do
+  let mut parsed : EffectfulOpOptions := {}
+  for opt in opts do
+    match opt with
+    | `(effectfulOpOpt| dispatch_method) =>
+        parsed := { parsed with effectfulDispatch? := some .method }
+    | `(effectfulOpOpt| dispatch_namespace) =>
+        parsed := { parsed with effectfulDispatch? := some .namespace }
+    | `(effectfulOpOpt| call_style $style:ident) =>
+        let callStyle ←
+          match style.getId.toString with
+          | "call" => pure CallStyle.call
+          | "attr" => pure CallStyle.attr
+          | other => throwError "unsupported call_style `{other}`; expected `call` or `attr`"
+        parsed := { parsed with callStyle? := some callStyle }
+    | `(effectfulOpOpt| result_mode $mode:ident) =>
+        let resultMode ←
+          match mode.getId.toString with
+          | "direct" => pure ResultMode.direct
+          | "transformed" => pure ResultMode.transformed
+          | "structured" => pure ResultMode.structured
+          | other =>
+              throwError
+                "unsupported result_mode `{other}`; expected `direct`, `transformed`, or `structured`"
+        parsed := { parsed with resultMode? := some resultMode }
+    | `(effectfulOpOpt| doc $docString:str) =>
         parsed := { parsed with doc? := some docString }
     | _ => throwUnsupportedSyntax
   pure parsed
@@ -292,16 +408,180 @@ private def elabGeneratedRootNamespacedDef
   elabCommand <| ← `(command|
     def $declIdent $binders* $argBinders* : $retTy := $body)
 
-private def mkClosedPureSpec?
+private abbrev PureParamCtx := Std.HashMap Name PureParam
+
+private def parsePureParamKind? (stx : TSyntax `term) : Option PureParamKind :=
+  match stx with
+  | `(term| DomainDesc) => some .domain
+  | `(term| Dim) => some .dim
+  | `(term| SSort) => some .sort
+  | _ => none
+
+private def parsePureParamBinder? (binder : Syntax) : Option (Name × PureParam) :=
+  match binder with
+  | `(bracketedBinder| {$id:ident : $ty:term}) =>
+      parsePureParamKind? ty |>.map fun kind =>
+        (id.getId, { name := lastNameComponent id.getId.eraseMacroScopes, kind := kind })
+  | `(bracketedBinder| ($id:ident : $ty:term)) =>
+      parsePureParamKind? ty |>.map fun kind =>
+        (id.getId, { name := lastNameComponent id.getId.eraseMacroScopes, kind := kind })
+  | _ => none
+
+private partial def parseClosedGroundDom? (stx : Syntax) : Option GroundDom :=
+  match stx with
+  | `(term| ($inner)) => parseClosedGroundDom? inner
+  | `(term| .ZZ) => some .ZZ
+  | `(term| .QQ) => some .QQ
+  | `(term| .RR) => some .RR
+  | `(term| .CC) => some .CC
+  | `(term| .gaussianZZ) => some .gaussianZZ
+  | `(term| GroundDom.ZZ) => some .ZZ
+  | `(term| GroundDom.QQ) => some .QQ
+  | `(term| GroundDom.RR) => some .RR
+  | `(term| GroundDom.CC) => some .CC
+  | `(term| GroundDom.gaussianZZ) => some .gaussianZZ
+  | `(term| .GF $n:num) => some (.GF n.getNat)
+  | `(term| GroundDom.GF $n:num) => some (.GF n.getNat)
+  | _ => none
+
+private partial def parseClosedDomainDesc? (stx : Syntax) : Option DomainDesc :=
+  match stx with
+  | `(term| ($inner)) => parseClosedDomainDesc? inner
+  | `(term| .ground $ground) => parseClosedGroundDom? ground |>.map DomainDesc.ground
+  | `(term| DomainDesc.ground $ground) => parseClosedGroundDom? ground |>.map DomainDesc.ground
+  | `(term| .fracField $base) => parseClosedDomainDesc? base |>.map DomainDesc.fracField
+  | `(term| DomainDesc.fracField $base) => parseClosedDomainDesc? base |>.map DomainDesc.fracField
+  | _ => none
+
+private partial def parsePureDomainSpec? (ctx : PureParamCtx) (stx : Syntax) : Option PureDomainSpec :=
+  match stx with
+  | `(term| ($inner)) => parsePureDomainSpec? ctx inner
+  | `(term| $id:ident) =>
+      match ctx.get? id.getId with
+      | some param =>
+          if param.kind == .domain then some (.var param.name)
+          else parseClosedDomainDesc? stx |>.map PureDomainSpec.concrete
+      | _ => parseClosedDomainDesc? stx |>.map PureDomainSpec.concrete
+  | `(term| .fracField $base) => parsePureDomainSpec? ctx base |>.map PureDomainSpec.fracField
+  | `(term| DomainDesc.fracField $base) => parsePureDomainSpec? ctx base |>.map PureDomainSpec.fracField
+  | _ => parseClosedDomainDesc? stx |>.map PureDomainSpec.concrete
+
+private partial def parsePureDimSpec? (ctx : PureParamCtx) (stx : Syntax) : Option PureDimSpec :=
+  match stx with
+  | `(term| ($inner)) => parsePureDimSpec? ctx inner
+  | `(term| $id:ident) =>
+      match ctx.get? id.getId with
+      | some param =>
+          if param.kind == .dim then some (.var param.name) else none
+      | _ => none
+  | `(term| .static $n:num) => some (.concrete (.static n.getNat))
+  | `(term| Dim.static $n:num) => some (.concrete (.static n.getNat))
+  | _ => none
+
+private partial def parseClosedRelKind? (stx : Syntax) : Option RelKind :=
+  match stx with
+  | `(term| ($inner)) => parseClosedRelKind? inner
+  | `(term| .eq) => some .eq
+  | `(term| .ne) => some .ne
+  | `(term| .lt) => some .lt
+  | `(term| .le) => some .le
+  | `(term| .gt) => some .gt
+  | `(term| .ge) => some .ge
+  | `(term| .mem) => some .mem
+  | `(term| .subset) => some .subset
+  | `(term| RelKind.eq) => some .eq
+  | `(term| RelKind.ne) => some .ne
+  | `(term| RelKind.lt) => some .lt
+  | `(term| RelKind.le) => some .le
+  | `(term| RelKind.gt) => some .gt
+  | `(term| RelKind.ge) => some .ge
+  | `(term| RelKind.mem) => some .mem
+  | `(term| RelKind.subset) => some .subset
+  | _ => none
+
+private partial def parsePureSortSpec? (ctx : PureParamCtx) (stx : Syntax) : Option PureSortSpec :=
+  match stx with
+  | `(term| ($inner)) => parsePureSortSpec? ctx inner
+  | `(term| $id:ident) =>
+      match ctx.get? id.getId with
+      | some param =>
+          if param.kind == .sort then some (.var param.name) else none
+      | _ => none
+  | `(term| .boolean) => some .boolean
+  | `(term| SymSort.boolean) => some .boolean
+  | `(term| .scalar $domain) => parsePureDomainSpec? ctx domain |>.map PureSortSpec.scalar
+  | `(term| SymSort.scalar $domain) => parsePureDomainSpec? ctx domain |>.map PureSortSpec.scalar
+  | `(term| .matrix $domain $rows $cols) =>
+      match parsePureDomainSpec? ctx domain, parsePureDimSpec? ctx rows, parsePureDimSpec? ctx cols with
+      | some d, some r, some c => some (.matrix d r c)
+      | _, _, _ => none
+  | `(term| SymSort.matrix $domain $rows $cols) =>
+      match parsePureDomainSpec? ctx domain, parsePureDimSpec? ctx rows, parsePureDimSpec? ctx cols with
+      | some d, some r, some c => some (.matrix d r c)
+      | _, _, _ => none
+  | `(term| .tensor $domain [$dims,*]) =>
+      match parsePureDomainSpec? ctx domain, dims.getElems.toList.mapM (parsePureDimSpec? ctx) with
+      | some d, some ds => some (.tensor d ds)
+      | _, _ => none
+  | `(term| SymSort.tensor $domain [$dims,*]) =>
+      match parsePureDomainSpec? ctx domain, dims.getElems.toList.mapM (parsePureDimSpec? ctx) with
+      | some d, some ds => some (.tensor d ds)
+      | _, _ => none
+  | `(term| .set $elem) => parsePureSortSpec? ctx elem |>.map PureSortSpec.set
+  | `(term| SymSort.set $elem) => parsePureSortSpec? ctx elem |>.map PureSortSpec.set
+  | `(term| .seq $elem) => parsePureSortSpec? ctx elem |>.map PureSortSpec.seq
+  | `(term| SymSort.seq $elem) => parsePureSortSpec? ctx elem |>.map PureSortSpec.seq
+  | `(term| .map $key $value) =>
+      match parsePureSortSpec? ctx key, parsePureSortSpec? ctx value with
+      | some k, some v => some (.map k v)
+      | _, _ => none
+  | `(term| SymSort.map $key $value) =>
+      match parsePureSortSpec? ctx key, parsePureSortSpec? ctx value with
+      | some k, some v => some (.map k v)
+      | _, _ => none
+  | `(term| .tuple [$items,*]) =>
+      items.getElems.toList.mapM (parsePureSortSpec? ctx) |>.map PureSortSpec.tuple
+  | `(term| SymSort.tuple [$items,*]) =>
+      items.getElems.toList.mapM (parsePureSortSpec? ctx) |>.map PureSortSpec.tuple
+  | `(term| .fn [$args,*] $ret) =>
+      match args.getElems.toList.mapM (parsePureSortSpec? ctx), parsePureSortSpec? ctx ret with
+      | some argSorts, some retSort => some (.fn argSorts retSort)
+      | _, _ => none
+  | `(term| SymSort.fn [$args,*] $ret) =>
+      match args.getElems.toList.mapM (parsePureSortSpec? ctx), parsePureSortSpec? ctx ret with
+      | some argSorts, some retSort => some (.fn argSorts retSort)
+      | _, _ => none
+  | `(term| .relation $kind [$args,*]) =>
+      match parseClosedRelKind? kind, args.getElems.toList.mapM (parsePureSortSpec? ctx) with
+      | some relKind, some argSorts => some (.relation relKind argSorts)
+      | _, _ => none
+  | `(term| SymSort.relation $kind [$args,*]) =>
+      match parseClosedRelKind? kind, args.getElems.toList.mapM (parsePureSortSpec? ctx) with
+      | some relKind, some argSorts => some (.relation relKind argSorts)
+      | _, _ => none
+  | _ => none
+
+private def mkPureSpec?
     (binders : Array Syntax)
     (argSorts : Array (TSyntax `term))
+    (variadicSort? : Option (TSyntax `term))
     (resultSort : TSyntax `term) : CommandElabM (Option PureSpec) := do
-  let _ := binders
-  let _ := argSorts
-  let _ := resultSort
-  -- `RegistryMetadata.pureSpec?` is reserved for a later manifest-backed reify pass.
-  -- The declaration command still exposes the field now so the schema is stable.
-  return none
+  let parsedBinders := binders.map parsePureParamBinder?
+  if parsedBinders.any Option.isNone then
+    return none
+  let params := parsedBinders.toList.filterMap id
+  let ctx : PureParamCtx :=
+    params.foldl (init := {}) fun acc (name, param) => acc.insert name param
+  let variadicSpec? := variadicSort?.bind (fun sortTerm => parsePureSortSpec? ctx sortTerm.raw)
+  match argSorts.toList.mapM (fun sortTerm => parsePureSortSpec? ctx sortTerm.raw),
+      parsePureSortSpec? ctx resultSort.raw with
+  | some args, some result =>
+      return some
+        { params := params.map Prod.snd
+          args := args
+          variadic? := variadicSpec?
+          result := result }
+  | _, _ => return none
 
 private def elabDeclarePureHead
     (name : TSyntax `ident)
@@ -313,7 +593,7 @@ private def elabDeclarePureHead
   let schemaTerm ← liftMacroM <| mkExtHeadSchemaTerm (argSpecs.map Prod.snd) resultSort
   let specValue ← liftMacroM <| mkExtHeadValueTerm backendName
   let specName := mkAuxIdent name "HeadSpec"
-  let pureSpec? ← mkClosedPureSpec? binders (argSpecs.map Prod.snd) resultSort
+  let pureSpec? ← mkPureSpec? binders (argSpecs.map Prod.snd) none resultSort
   let extraAliases :=
     let helperAlias := (shortIdentName name).toString
     if options.sympyAlias then
@@ -345,14 +625,54 @@ private def elabDeclarePureHead
       (← `(term| Term $resultSort)) helperBody
     attachGeneratedDocAt (`SymPy ++ shortIdentName name) options.doc?
   registerSymbolicDecl .head name backendName .pureHead options.doc?
-    options.callStyle pureSpec? extraAliases
+    options.callStyle none none pureSpec? extraAliases
+
+private def elabDeclareVariadicPureHead
+    (name : TSyntax `ident)
+    (binders : Array Syntax)
+    (arg : TSyntax `ident)
+    (argSort resultSort : TSyntax `term)
+    (backendName : TSyntax `str)
+    (options : PureHeadOptions) : CommandElabM Unit := do
+  if options.callStyle == .attr then
+    throwError "declare_variadic_pure_head does not support `call_style attr`"
+  let pureSpec? ← mkPureSpec? binders #[] (some argSort) resultSort
+  let extraAliases :=
+    let helperAlias := (shortIdentName name).toString
+    if options.sympyAlias then
+      [helperAlias, s!"SymPy.{helperAlias}"]
+    else
+      [helperAlias]
+  let inputTy := mkPureInputTypeIdent arg
+  let argBinders : Array Syntax := #[
+    ← `(bracketedBinder| {$inputTy : Type}),
+    ← `(bracketedBinder| [IntoPureTerm $inputTy $argSort]),
+    ← `(bracketedBinder| (args : List $inputTy))
+  ]
+  let helperBody ← `(term|
+    let pureArgs : List (Term $argSort) :=
+      args.map (IntoPureTerm.intoPureTerm (σ := $argSort))
+    SymbolicLean.variadicHeadApp (backendLeanNameOf $backendName) $argSort $resultSort pureArgs)
+  elabGeneratedDef binders name argBinders
+    (← `(term| Term $resultSort)) helperBody
+  attachGeneratedDoc name options.doc?
+  if options.sympyAlias then
+    elabGeneratedRootNamespacedDef `SymPy binders name argBinders
+      (← `(term| Term $resultSort)) helperBody
+    attachGeneratedDocAt (`SymPy ++ shortIdentName name) options.doc?
+  registerSymbolicDecl .head name backendName .pureHead options.doc?
+    options.callStyle none none pureSpec? extraAliases
 
 private def elabRegisterOp
     (name : TSyntax `ident)
     (opLiteral : TSyntax `str)
-    (doc? : Option (TSyntax `str)) : CommandElabM Unit := do
-  attachGeneratedDoc name doc?
+    (options : EffectfulOpOptions) : CommandElabM Unit := do
+  let declName := (← getCurrNamespace) ++ shortIdentName name
+  let previousDocs := (findRegistryEntry? (← getEnv) declName).bind (·.metadata.docs)
+  let doc? := options.doc? <|> previousDocs.map fun text => Syntax.mkStrLit text
+  attachGeneratedDoc name options.doc?
   registerSymbolicDecl .op name opLiteral .effectfulOp doc?
+    (options.callStyle?.getD .call) options.effectfulDispatch? options.resultMode?
 
 private def elabDeclareSympyOp
     (name : TSyntax `ident)
@@ -461,11 +781,10 @@ elab "declare_sympy_op " name:ident " => " op:str : command => do
   let exprId := Lean.mkIdent `expr
   elabDeclareSympyOp name #[sigmaBinder.raw] exprId argTy outSort op none
 
-elab "register_op " name:ident " => " op:str : command => do
-  elabRegisterOp name op none
-
-elab "register_op " name:ident " => " op:str " doc " docString:str : command => do
-  elabRegisterOp name op (some docString)
+elab_rules : command
+  | `(register_op $name:ident => $op:str $opts:effectfulOpOpt*) => do
+      let options ← parseEffectfulOpOptions (opts.map (·.raw))
+      elabRegisterOp name op options
 
 elab_rules : command
   | `(declare_pure_head $name:ident $binders:bracketedBinder*
@@ -478,6 +797,11 @@ elab_rules : command
       let args ← (argSpecs.map (·.raw)).mapM parsePureHeadArg
       let options ← parsePureHeadOptions (opts.map (·.raw))
       elabDeclarePureHead name (binders.map (·.raw)) args resultSort backendName options
+  | `(declare_variadic_pure_head $name:ident $binders:bracketedBinder*
+      for ($arg:ident : $argSort:term) returns $resultSort:term => $backendName:str
+      $opts:pureHeadOpt*) => do
+      let options ← parsePureHeadOptions (opts.map (·.raw))
+      elabDeclareVariadicPureHead name (binders.map (·.raw)) arg argSort resultSort backendName options
 
 elab "declare_sympy_op " name:ident " => " op:str " doc " docString:str : command => do
   let sigmaBinder ← `(bracketedBinder| {σ : SSort})

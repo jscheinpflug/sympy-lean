@@ -2,6 +2,9 @@ import SymbolicLean
 
 open SymbolicLean
 
+#sympy_hover "Min"
+#sympy_hover "Max"
+
 private def sameEncodedTerm (lhs rhs : Term σ) : Bool :=
   (encodeTerm lhs).compress == (encodeTerm rhs).compress
 
@@ -11,7 +14,7 @@ example : Term (Scalar Rat) :=
 
 example : Term (Scalar Rat) :=
   let x : SymDecl (Scalar Rat) := sym `x
-  SymPy.sqrt ((x : Term (Scalar Rat)) + 1)
+  SymPy.sqrt (x + 1)
 
 example : Term (Scalar Rat) :=
   let x : SymDecl (Scalar Rat) := sym `x
@@ -20,7 +23,17 @@ example : Term (Scalar Rat) :=
 
 example : Term (Scalar Rat) :=
   let x : SymDecl (Scalar Rat) := sym `x
-  SymPy.exp x + SymPy.log ((x : Term (Scalar Rat)) + 1)
+  let y : SymDecl (Scalar Rat) := sym `y
+  SymPy.Min ([x, y, (1 : Term (Scalar Rat))] : List (Term (Scalar Rat)))
+
+example : Term (Scalar Rat) :=
+  let x : SymDecl (Scalar Rat) := sym `x
+  let y : SymDecl (Scalar Rat) := sym `y
+  SymPy.Max ([x, y, (1 : Term (Scalar Rat))] : List (Term (Scalar Rat)))
+
+example : Term (Scalar Rat) :=
+  let x : SymDecl (Scalar Rat) := sym `x
+  SymPy.exp x + SymPy.log (x + 1)
 
 noncomputable section
 
@@ -35,7 +48,7 @@ example : Term (.scalar (.ground .RR)) :=
 #sympy Rat do
   symbols (x : Rat)
   let expr : Term (Scalar Rat) :=
-    SymPy.sin ((x : Term (Scalar Rat)) + 1) + SymPy.exp ((x : Term (Scalar Rat)) + 1)
+    SymPy.sin (x + 1) + SymPy.exp (x + 1)
   pure expr
 
 #sympy Complex do
@@ -48,7 +61,8 @@ example : Term (.scalar (.ground .RR)) :=
   let result ← sympy Rat do
     symbols (x : Rat) (y : Rat)
     let expr : Term (Scalar Rat) :=
-      SymPy.sin x + SymPy.cos y + SymPy.sqrt ((x : Term (Scalar Rat)) + 1)
+      SymPy.sin x + SymPy.cos y + SymPy.sqrt (x + 1) +
+        SymPy.Min ([x, y, (1 : Term (Scalar Rat))] : List (Term (Scalar Rat)))
     let simplified ← simplify expr
     pretty simplified
   match result with
@@ -87,6 +101,19 @@ noncomputable section
   let result ← sympy Rat do
     symbols (x : Rat) (y : Rat)
     let term : Term (Scalar Rat) := SymPy.atan2 x y
+    let simplified ← simplify term
+    let reified ← reify simplified
+    pure (sameEncodedTerm reified term.canonicalize)
+  match result with
+  | .ok ok => IO.println ok
+  | .error err => IO.println (repr err)
+
+-- Homogeneous variadic scalar heads round-trip through the same manifest-driven reify path.
+#eval do
+  let result ← sympy Rat do
+    symbols (x : Rat) (y : Rat)
+    let term : Term (Scalar Rat) :=
+      SymPy.Max ([x, y, (1 : Term (Scalar Rat))] : List (Term (Scalar Rat)))
     let simplified ← simplify term
     let reified ← reify simplified
     pure (sameEncodedTerm reified term.canonicalize)

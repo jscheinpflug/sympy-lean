@@ -62,11 +62,15 @@ private def renderHover (entry : RegistryEntry) : String :=
       | [] => "none"
       | xs => String.intercalate ", " xs
   let errorTemplate := entry.metadata.errorTemplate.getD "none"
+  let effectfulDispatch :=
+    match entry.metadata.effectfulDispatch? with
+    | some dispatch => reprStr dispatch
+    | none => "none"
   let pureSpec :=
     match entry.metadata.pureSpec? with
     | some spec => reprStr spec
     | none => "none"
-  s!"{entry.declName}\nkind: {reprStr entry.kind}\nbackend: {entry.backendName}\nbackendPath: {backendPath}\ncallStyle: {reprStr entry.metadata.callStyle}\npureSpec: {pureSpec}\naliases: {aliases}\ncategories: {categories}\ndispatch: {reprStr entry.metadata.dispatchMode}\nreify: {reprStr entry.metadata.reifyMode}\nresult: {reprStr entry.metadata.resultMode}\nerrorTemplate: {errorTemplate}\n{docs}"
+  s!"{entry.declName}\nkind: {reprStr entry.kind}\nbackend: {entry.backendName}\nbackendPath: {backendPath}\ncallStyle: {reprStr entry.metadata.callStyle}\neffectfulDispatch: {effectfulDispatch}\npureSpec: {pureSpec}\naliases: {aliases}\ncategories: {categories}\ndispatch: {reprStr entry.metadata.dispatchMode}\nreify: {reprStr entry.metadata.reifyMode}\nresult: {reprStr entry.metadata.resultMode}\nerrorTemplate: {errorTemplate}\n{docs}"
 
 private def renderCompletion (entry : RegistryEntry) : String :=
   let aliasSuffix :=

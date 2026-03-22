@@ -6,12 +6,12 @@
 ## Responsibilities
 - Define the minimal pure set vocabulary needed for the current solver-facing surface.
 - Use registry-driven pure-head declarations for set constructors and `call_style attr` for `S.Reals` / `S.Integers`.
-- Keep the current set wave narrow to interval/set-combinator helpers and the two public `SymPy.S.*` constants.
+- Keep the current set wave narrow to interval/set-combinator helpers, a homogeneous variadic `FiniteSet`, and the two public `SymPy.S.*` constants.
 
 ## Public Surface
-- Set constructors: `Interval`, `Union`, `Intersection`, `Complement`
+- Set constructors: `Interval`, `Union`, `Intersection`, `Complement`, `FiniteSet`
 - Set constants: `Reals`, `Integers`
-- `SymPy.Interval`, `SymPy.Union`, `SymPy.Intersection`, `SymPy.Complement`
+- `SymPy.Interval`, `SymPy.Union`, `SymPy.Intersection`, `SymPy.Complement`, `SymPy.FiniteSet`
 - `SymPy.S.Reals`, `SymPy.S.Integers`
 
 ## Change Triggers

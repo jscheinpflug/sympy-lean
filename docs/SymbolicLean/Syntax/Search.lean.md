@@ -7,7 +7,7 @@
 - Provide a registry-backed `#sympy_search "keyword"` command.
 - Search symbolic registry entries over declaration names, backend names, aliases, categories, and attached docs.
 - Provide registry-backed hover-style and completion-style command surfaces for generated heads and ops.
-- Render richer hover output from registry metadata including backend dispatch path, call style, and optional pure-head spec data.
+- Render richer hover output from registry metadata including backend dispatch path, call style, explicit effectful dispatch mode, and optional pure-head spec data.
 
 ## Public Surface
 - command `#sympy_search "keyword"`

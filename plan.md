@@ -1,209 +1,315 @@
-# Production UX and Extensibility Backbone
+# SymPy Import Platform And High-Coverage Expansion
 
-## Overview
+## Motivation
 
-This slice is about turning `sympy-lean` into a production-ready symbolic front end instead of a promising prototype.
+The current codebase is no longer a prototype. It has a real registry, a generated manifest,
+a session-scoped worker, typed pure terms, effectful front doors, and the beginnings of a
+usable public UX. That is enough for a curated slice, but it is not yet enough for importing a
+large fraction of SymPy without regressions in quality.
 
-The current architecture already has the right major pieces:
-- typed pure terms in Lean
-- a registry and generated manifest
-- a session-scoped SymPy worker
-- public front-door wrappers
+The limiting problems are no longer foundational correctness problems. They are scalability
+problems:
 
-The main problem is that these pieces are not yet the full source of truth for one another. In practice:
-- new pure heads still require worker-side special cases
-- reification support is too narrow for new coverage to feel complete
-- some public effectful ops are not registry-backed
-- simple string/JSON-returning ops are harder to add than they should be
-- public naming and examples are not yet consistent enough to feel like a production UX
+- the registry and manifest are not yet the complete source of truth for all pure heads and
+  effectful ops
+- the worker still has hard-coded behavior for too many shapes, especially reification
+- effectful dispatch is still too flat for broad `backendPath` and keyword-heavy coverage
+- public wrappers are still too manual to scale to large coverage waves
+- pure-term ergonomics have improved, but they are not yet complete across the main scalar,
+  set, and structured-builder workflows
+- the docs still need a stronger distinction between canonical eager UX and lower-level pure
+  constructors
 
-This plan fixes those problems in the right order:
-1. make the registry/manifest drive extension and discoverability
-2. make pure-head evaluation and reification generic enough for real coverage growth
-3. make effectful op decoding and public front doors easier to extend
-4. land a first coverage wave that proves the infrastructure works
-5. improve solver/set UX so the current public surface feels complete, not partial
+If we try to import most of SymPy now, the repo will grow in coverage but lose coherence:
+each new family will bring a little more worker special-casing, a little more wrapper
+duplication, and a little more user-visible inconsistency. This plan prevents that.
+
+## Core Idea
+
+The next feature is not "add one more SymPy family". The next feature is to make broad SymPy
+coverage mechanically scalable.
+
+The target architecture is:
+
+1. declare a pure head or effectful op once in Lean
+2. emit complete registry metadata into the manifest
+3. let the worker evaluate and reify it generically from that metadata
+4. generate the public Lean wrapper surface from the same declaration
+5. document it once and have hover/search/docs all agree
+
+When that is true, importing more of SymPy becomes a coverage problem instead of an
+architecture problem.
+
+This plan is intentionally platform-first. Broad import is the goal, but broad import only
+starts after the generic path is strong enough that new families do not require family-specific
+glue in the worker or in `Ops/Core`.
 
 ## Goals
 
-- Make the registry and manifest the single source of truth for extension, worker dispatch, hover/search, and generated public surface.
-- Make adding most new SymPy pure functions declarative instead of multi-file manual work.
-- Improve the public UX so the documented surface feels SymPy-aligned, consistent, and production-ready.
-- Keep the current wrapper shapes mostly intact while shifting canonical docs/examples toward SymPy naming.
-- Land a first coverage wave for scalar special functions, then a small solver/set wave.
+- Make the registry and manifest the single source of truth for extension metadata.
+- Make most new pure heads declarative rather than hand-wired.
+- Make most new effectful ops declarative rather than hand-wired.
+- Make the public UX feel intentionally designed instead of "whatever shape happened to land".
+- Import large SymPy families in grouped waves with clear acceptance gates.
+- Keep compatibility aliases only where they help migration or readability; do not let them
+  define the primary documented UX.
 
-## Scope Of This Slice
+## Non-Goals
 
-- Registry metadata expansion
-- Generic pure-head declaration infrastructure
-- Worker-side generic pure-head evaluation
-- Worker-side targeted generic reification for the newly added public surface
-- Generic JSON/string effectful decode support
-- Public front doors for `solve`, `integrate`, `doit`, `evalf`, and `latex`
-- First scalar special-function coverage wave
-- Minimal set vocabulary for solver UX
-- README, project-guide, mirrored docs, and examples refresh
+- Reimplement all of SymPy semantics inside Lean.
+- Provide proof-producing or trusted-proof integration in this slice.
+- Import niche subpackages just to maximize function count.
+- Solve every possible coercion or inference problem before adding any coverage.
 
-## Public Interface Changes
+The target is broad, high-value SymPy coverage with a consistent typed Lean UX, not literal
+100 percent parity with every obscure SymPy corner.
 
-- Extend `RegistryMetadata` with pure-head dispatch metadata:
-  - `backendPath : List String`
-  - `callStyle : call | attr`
-  - `pureSpec? : Option { args : List SSort, result : SSort }`
-- Add a metadata-only effectful registration command:
-  - `register_op ... => ...`
-- Add a generic pure-head declaration command:
-  - `declare_pure_head ...`
-- Add scalar sugar on top of it:
-  - `declare_scalar_fn₁`
-  - `declare_scalar_fn₂`
-- Add canonical public front doors:
-  - `solve`
-  - `integrate`
-  - `doit`
-  - `evalf`
-  - `latex`
-- Keep existing compatibility wrappers such as `solveUnivariate` in this slice unless they actively block consistency.
-- Add public solver/set constants:
-  - `SymPy.S.Reals`
-  - `SymPy.S.Integers`
+## What "Ready To Scale" Means
 
-## Workstreams
+The repo is ready for broad import only when the following are true:
 
-### 1. Registry And Manifest As The Backbone
+- adding a fixed-arity pure head usually means one declaration, one doc update, and one example
+- adding a common effectful op usually means one declaration plus an optional structured decoder
+- worker evaluation of extension heads is manifest-driven, not switch-by-switch manual
+- worker reification of extension heads is manifest-driven for the supported families, not
+  hard-coded per function
+- public wrappers are emitted from a small number of generators rather than copied by hand
+- ordinary examples use the intended syntax without repeated `Term` casts or constructor-only
+  workflows
+- README, project guide, hover/search, examples, and actual runtime behavior all describe the
+  same public surface
 
-- Refactor the declaration machinery so registry registration is a first-class primitive, not just a side effect of `declare_op`.
-- Make every public head and every public effectful op registry-backed.
-- Replace the current `rref` metadata gap with a proper `register_op` path instead of a hand-written unregistered exception.
-- Keep hover/search entirely registry-driven, including docs, aliases, categories, and error templates.
+## Design Principles
 
-Why:
-- This removes drift between public API, manifest contents, and discoverability.
-- It also gives the worker enough structured information to stop hard-coding extension behavior.
+### 1. Registry First
 
-### 2. Generic Pure-Head Declaration Pipeline
+Every new public head and every new public op must exist in the registry with enough metadata to
+drive:
 
-- Implement `declare_pure_head` in the syntax/registry layer.
-- `declare_pure_head` must generate:
-  - the registry entry
-  - the typed `ExtHeadSpec`
-  - the Lean term helper
-  - the optional `SymPy.*` alias when requested
-- Build `declare_scalar_fn₁` and `declare_scalar_fn₂` as thin sugar on top of `declare_pure_head`.
-- Keep the existing core arithmetic/logic/calculus constructors unchanged; this slice generalizes extension heads, not core heads.
+- manifest generation
+- hover/search discoverability
+- worker dispatch
+- worker reify
+- public wrapper generation
+- docs/examples classification
 
-Why:
-- This is the main extensibility win.
-- After this lands, most new scalar SymPy functions should be declared instead of hand-wired.
+The registry is not documentation only and not worker metadata only. It is the cross-layer
+contract.
 
-### 3. Worker Eval And Reify Generalization
+### 2. Generated Beats Hand-Wired
 
-- Replace the current hard-coded “unsupported manifest-dispatched pure head” fallback with registry-driven evaluation in `tools/sympy_worker.py`.
-- Evaluation rules:
-  - `callStyle.call`: resolve `backendPath` and call the target with evaluated args
-  - `callStyle.attr`: resolve the attribute object directly with no call
-- Reification rules in this slice:
-  - required: registered unary/binary scalar call-heads
-  - required: public nullary attribute constants used by solver UX
-  - deferred: broad variadic/set/tensor reification beyond the explicitly added public surface
-- Preserve existing special cases for core heads and structured calculus heads where custom behavior already exists.
+Broad coverage will fail if every new SymPy family needs:
 
-Why:
-- Without this, “registered” still does not mean “works”.
-- This is the difference between coverage on paper and coverage that actually evaluates, pretty-prints, and round-trips.
+- a new Lean helper
+- a new worker `if backend_name == ...`
+- a new reify special case
+- a new wrapper in `Ops/Core`
+- a new ad hoc example style
 
-### 4. Effectful Op Framework And Public Front Doors
+That is exactly the maintenance pattern we are trying to eliminate. Hand-written code should
+only remain where the family is genuinely special:
 
-- Add a generic `OpPayloadDecode` fallback for any `[FromJson α]`.
-- Add explicit decode instances only when `FromJson` is insufficient.
-- Use that path to support `latex` as a string-returning op without bespoke command syntax.
-- Keep custom hand-written bodies only for truly structured results such as `rref`, but require them to register metadata through `register_op`.
-- Add public front doors for:
-  - `integrate`
-  - `doit`
-  - `evalf`
-  - `latex`
-  - `solve`
-- Make `solve` the documented public name for the current finite univariate solve surface, while keeping `solveUnivariate` as a compatibility alias in this slice.
+- built-in arithmetic/logic/calculus core heads
+- structured result decoders such as `rref`, `solve`, or solver models
+- unusually typed or keyword-heavy public convenience wrappers
 
-Why:
-- This improves UX immediately.
-- It also removes friction when adding common effectful SymPy operations later.
+### 3. Canonical UX Over Raw Coverage
 
-### 5. First Coverage Wave: Scalar Special Functions
+The repo should not import a large surface and then explain away the awkward parts. The default
+documented UX must be the best UX we can offer now.
 
-- Add a dedicated pure-head module for special functions and use it as the reference implementation pattern for future coverage.
-- Include:
-  - `sin`, `cos`, `tan`
-  - `asin`, `acos`, `atan`, `atan2`
-  - `sinh`, `cosh`, `tanh`
-  - `exp`, `log`, `sqrt`
-  - `Abs`, `sign`, `floor`, `ceiling`
-  - `re`, `im`, `conjugate`, `arg`
-- Do not add variadic names such as `Max`, `Min`, or `FiniteSet` in this slice.
+That means:
 
-Why:
-- This is the highest-value first wave for tutorial parity and exploratory UX.
-- It also proves the new pure-head infrastructure on real SymPy coverage, not a toy example.
+- eager effectful ops such as `integrate`, `solve`, `doit`, `evalf`, and `latex` are the
+  primary public workflow where they are the natural user-facing SymPy action
+- pure constructors such as `Integral`, `Derivative`, `Sum`, and `Piecewise` remain available,
+  but they are explained as typed symbolic builders rather than the main on-ramp
+- extension families should inherit the same ergonomic layer automatically wherever possible
 
-### 6. Solver And Set UX Follow-Up
+### 4. Import By Family, Not By One-Off Function
 
-- Add the minimal set vocabulary needed for actual `solveset` workflows:
-  - `Interval`
-  - `Union`
-  - `Intersection`
-  - `Complement`
-  - `SymPy.S.Reals`
-  - `SymPy.S.Integers`
-- Build these on the same registry-driven pure-head machinery plus `callStyle.attr`/dotted backend paths.
-- Make `solveset` examples show both `pretty solved.setExpr` and use of the new pure set constants.
-- Treat broader set algebra and variadic set constructors as the next wave, not this slice.
+Large import should happen in grouped waves whose members share the same runtime and UX shape.
+Examples:
 
-Why:
-- Solver UX is currently readable but not composable.
-- This closes a real user-facing gap without trying to cover all of SymPy’s set system at once.
+- scalar call-head functions
+- predicates and relations
+- set constructors and set constants
+- matrix and linear-algebra operations
+- calculus constructors and eager evaluators
+- common combinatorics / special-function families
 
-### 7. Docs, Examples, And Validation
+Each wave must land only after the platform already supports that family's shape.
 
-- Every touched `SymbolicLean/**` file must land with its mirrored `/docs` update in the same change.
-- Refresh README and the project guide so the documented canonical surface is:
-  - SymPy-like in naming
-  - valid Lean syntax
-  - explicit about pure constructors vs effectful ops
-- Add one dedicated example module for special functions and one for eval/render ops if the existing files become too noisy.
-- Keep the negative and compile-time type-level examples intact where the new surface affects them.
+## Main Workstreams
 
-## Success Criteria
+### 1. Complete The Registry And Manifest Contract
 
-- A new unary or binary scalar SymPy function usually requires one declaration plus docs/examples, not bespoke worker eval code.
-- New pure scalar heads can:
-  - evaluate
-  - pretty-print
-  - reify in the supported slice
-- `rref`, `solve`, `integrate`, `latex`, and the new pure heads all appear in `#sympy_hover` / `#sympy_search`.
-- README and example files use the canonical production surface.
-- Local build, example compilation, runtime examples, and the doc harness all pass.
+The current schema is close, but not complete enough for broad import. This workstream finishes
+it.
 
-## Validation Commands
+Required outcomes:
+
+- `pureSpec?` becomes real manifest data, not placeholder metadata
+- registry entries distinguish the data needed for pure-head eval, pure-head reify, and
+  effectful op dispatch
+- the manifest carries enough information for dotted backend paths, call-vs-attr dispatch,
+  aliases, docs, categories, and result shape expectations
+- hover/search output becomes a faithful view of what the runtime will actually do
+
+This is the key architectural pivot: the manifest stops being "helpful metadata" and becomes
+the runtime contract for extension coverage.
+
+### 2. Generalize Pure-Head Evaluation And Reify
+
+The current worker support is still too narrow. It needs to support the shapes that broad
+coverage will actually use.
+
+Required support:
+
+- nullary attr constants such as `SymPy.S.*` and similar namespaced constants
+- fixed-arity call heads beyond the current unary/binary scalar-only slice
+- homogeneous variadic heads for families such as `FiniteSet`, `Union`, `Intersection`, `Min`,
+  and `Max`
+- scalar, boolean, set, matrix, tuple, and sequence-returning pure heads where the sort is
+  fully known from metadata
+- generic reify for extension heads in those supported families
+
+Core arithmetic, logic, and structured calculus heads should stay built in. They are part of
+the typed term core and should not be forced through the extension path just for uniformity.
+
+### 3. Generalize Effectful Op Dispatch
+
+Broad SymPy coverage will not fit inside flat `backendName` method lookup. Many operations need:
+
+- dotted backend paths
+- namespace functions vs instance methods
+- keyword arguments
+- optional trailing arguments
+- more than one common result shape
+
+The effectful op layer needs to become as declarative as the pure-head layer:
+
+- `declare_op` metadata must be rich enough to describe the dispatch path
+- the worker must use registry metadata to resolve effectful calls
+- the Lean side must have a generic decode path for common JSON and ref-shaped results
+- custom decoders should remain only for genuinely structured payloads
+
+This is the prerequisite for importing broad solver, matrix, and evaluation coverage without
+turning `tools/sympy_worker.py` into another giant switch.
+
+### 4. Finish The Lean Ergonomic Layer
+
+The current scalar ergonomics work is a good foundation, but broad coverage still needs more:
+
+- mixed scalar arithmetic across the common domain lifts, not just the current narrow slice
+- cleaner relation-builder ergonomics
+- better structured-builder inference for bounds, limits, and piecewise branches
+- a clear, reusable policy for optional arguments and keyword-heavy public APIs
+- less friction at the pure/effectful boundary where the obvious user intent is already typed
+
+This workstream is about making sure that when we import a family, users can actually use it in
+the way the docs advertise.
+
+### 5. Generate The Public Wrapper Surface
+
+`Ops/Core` is already carrying more repetition than a high-coverage import can tolerate.
+
+The next state should be:
+
+- a small set of generator commands/macros that emit `SymPy.*` aliases and method forms
+- wrapper generation parameterized by:
+  - receiver kind (`Term`, `SymDecl`, `SymExpr`)
+  - conversion class (`IntoSymExpr`, `IntoSymSymbol`, `IntoSymFun`, pure coercion classes)
+  - result shape
+  - optional docs/aliases/category metadata
+- hand-written wrappers only where they materially improve typing or defaults
+
+This turns wrapper expansion into structured data and eliminates one of the main scaling risks.
+
+### 6. Import Coverage In Waves
+
+Once the platform is ready, coverage should land in the following order:
+
+1. scalar pure-head families and common predicates
+2. set vocabulary and set-building operations
+3. matrix and linear-algebra operations
+4. calculus constructors plus eager calculus/evaluation UX cleanup
+5. additional high-value top-level SymPy families that fit the generic path
+
+Each wave should include:
+
+- declarations
+- examples
+- docs
+- hover/search checks
+- runtime validation
+
+No wave should land with knowingly incomplete runtime support for its shape.
+
+## Public Interface Direction
+
+This feature will add or stabilize the following kinds of public interfaces:
+
+- richer `declare_pure_head` metadata usage, possibly with a companion variadic declaration path
+- richer `declare_op` metadata usage for dotted effectful dispatch and keyword-heavy calls
+- generated public wrappers instead of large manual `Ops/Core` expansions
+- broader `IntoPureTerm`, `IntoTerm`, `IntoScalarTerm`, and related builder-coercion support
+- clearer canonical public names for eager operations
+
+Compatibility policy:
+
+- keep existing user-facing names where they are already good
+- keep compatibility aliases when they cost little and reduce churn
+- do not let legacy or transition wrappers remain the primary documented path
+
+## Validation Strategy
+
+The platform phase is complete only when it proves itself against representative coverage, not
+just unit-sized smoke tests.
+
+Required validation categories:
+
+- build and example suite
+- manifest generation
+- hover/search discoverability
+- pure eval and reify round-trips
+- effectful op dispatch over dotted paths and keyword-heavy calls
+- docs parity with runnable examples
+
+Representative commands:
 
 ```bash
 lake build SymbolicLean
+lake build sympyManifest
 lake build SymbolicLean.Examples
-lake env lean SymbolicLean/Examples/Scalars.lean
-lake env lean SymbolicLean/Examples/Matrices.lean
-lake env lean SymbolicLean/Examples/Solvers.lean
 python3 scripts/check_doc_harness.py --mode local --scope core
 ```
 
+Representative coverage must include:
+
+- scalar unary/binary/variadic pure heads
+- attr constants
+- set constructors and set constants
+- matrix operations
+- effectful algebra/calculus/evaluation/solver operations
+- reify after effectful simplification/evaluation where the family claims to support it
+
 ## Deferred
 
-- `Term` constructor collapse
-- Broad variadic pure-head support
-- Broad set/tensor reification beyond the explicitly added public surface
-- Proof-producing or trusted-proof SymPy integration
+- proof certification or trusted-proof integration
+- literal parity with every SymPy subpackage
+- obscure or highly specialized SymPy modules that do not fit the broad high-value surface
+- broad tensor-specific import unless it becomes a first-class product goal
 
-## Assumptions
+## End State
 
-- Canonical naming should move toward SymPy, but current wrappers should mostly remain available as compatibility aliases in this slice.
-- The current wrapper shapes should not be reshaped broadly unless needed for naming parity or typing.
-- Generic reify support is required only for the new scalar special functions and the small set of public constants introduced for solver UX.
+At the end of this feature, the repo should be able to import a large fraction of top-level,
+high-value SymPy functionality without each family reopening architecture questions.
+
+The practical test is simple:
+
+- a new family should feel like a declaration-and-docs task, not a cross-cutting surgery task
+- the public UX should stay coherent as coverage grows
+- examples should look like intended user code, not internal plumbing
+
+That is the point at which broad SymPy import becomes sustainable.

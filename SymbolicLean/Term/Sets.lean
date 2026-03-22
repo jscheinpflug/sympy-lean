@@ -24,6 +24,11 @@ declare_pure_head Complement {d : DomainDesc}
   sympy_alias
   doc "Pure set-complement constructor backed by SymPy's `Complement`."
 
+declare_variadic_pure_head FiniteSet {d : DomainDesc}
+  for (elem : .scalar d) returns (.set (.scalar d)) => "FiniteSet"
+  sympy_alias
+  doc "Homogeneous variadic finite-set constructor backed by SymPy's `FiniteSet`."
+
 declare_pure_head Reals returns (.set (.scalar (.ground .RR))) => "S.Reals"
   call_style attr
   doc "Pure real-number set constant backed by SymPy's `S.Reals`."

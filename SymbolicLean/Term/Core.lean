@@ -69,11 +69,26 @@ instance : Coe (SymDecl σ) (Term σ) where
 instance : Coe (FunDecl args ret) (Term (.fn args ret)) where
   coe decl := .atom (.fun_ decl)
 
+class IntoTerm (α : Type) (σ : outParam SSort) where
+  -- General pure-term conversion used by builder surfaces that accept already-typed inputs
+  -- such as `Term`, `SymDecl`, and sort-specific convenience classes that extend it.
+  intoTerm : α → Term σ
+
+instance : IntoTerm (Term σ) σ where
+  intoTerm := id
+
+instance : IntoTerm (SymDecl σ) σ where
+  intoTerm decl := (decl : Term σ)
+
 namespace Args
 
 def singleton (arg : Term σ) : Args [σ] := .cons arg .nil
 
 def pair (lhs : Term σ) (rhs : Term τ) : Args [σ, τ] := .cons lhs (.cons rhs .nil)
+
+def ofHomogeneousList : (args : List (Term σ)) → Args (List.replicate args.length σ)
+  | [] => .nil
+  | arg :: rest => .cons arg (ofHomogeneousList rest)
 
 end Args
 

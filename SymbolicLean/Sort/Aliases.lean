@@ -83,4 +83,17 @@ instance [SymCarrier α] [DomainCarrier (CarrierDomain.domain (α := α))]
     InterpretsField (carrierDomain α) :=
   show InterpretsField (CarrierDomain.domain (α := α)) from inferInstance
 
+instance : UnifyDomain (carrierDomain Rat) (.ground .ZZ) (carrierDomain Rat) := ⟨trivial⟩
+instance : UnifyDomain (.ground .ZZ) (carrierDomain Rat) (carrierDomain Rat) := ⟨trivial⟩
+instance : UnifyDomain (carrierDomain Real) (.ground .ZZ) (carrierDomain Real) := ⟨trivial⟩
+instance : UnifyDomain (.ground .ZZ) (carrierDomain Real) (carrierDomain Real) := ⟨trivial⟩
+instance : UnifyDomain (carrierDomain Real) (.ground .QQ) (carrierDomain Real) := ⟨trivial⟩
+instance : UnifyDomain (.ground .QQ) (carrierDomain Real) (carrierDomain Real) := ⟨trivial⟩
+instance : UnifyDomain (carrierDomain Complex) (.ground .ZZ) (carrierDomain Complex) := ⟨trivial⟩
+instance : UnifyDomain (.ground .ZZ) (carrierDomain Complex) (carrierDomain Complex) := ⟨trivial⟩
+instance : UnifyDomain (carrierDomain Complex) (.ground .QQ) (carrierDomain Complex) := ⟨trivial⟩
+instance : UnifyDomain (.ground .QQ) (carrierDomain Complex) (carrierDomain Complex) := ⟨trivial⟩
+instance : UnifyDomain (carrierDomain Complex) (.ground .RR) (carrierDomain Complex) := ⟨trivial⟩
+instance : UnifyDomain (.ground .RR) (carrierDomain Complex) (carrierDomain Complex) := ⟨trivial⟩
+
 end SymbolicLean

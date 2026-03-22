@@ -1,4 +1,4 @@
-import SymbolicLean.Term.Head
+import SymbolicLean.Term.Literals
 
 namespace SymbolicLean
 
@@ -26,19 +26,32 @@ instance : CanCompare .ge (.scalar d) (.scalar d) where
 def compare [inst : CanCompare rel σ τ] (lhs : Term σ) (rhs : Term τ) : Term .boolean :=
   inst.compare lhs rhs
 
-def eq_ (lhs rhs : Term σ) : Term .boolean := compare (rel := .eq) lhs rhs
+def eq_ {α : Type} {β : Type} {σ : SSort} [IntoTerm α σ] [IntoTerm β σ]
+    (lhs : α) (rhs : β) : Term .boolean :=
+  compare (rel := .eq) (IntoTerm.intoTerm lhs) (IntoTerm.intoTerm rhs)
 
-def ne_ (lhs rhs : Term σ) : Term .boolean := compare (rel := .ne) lhs rhs
+def ne_ {α : Type} {β : Type} {σ : SSort} [IntoTerm α σ] [IntoTerm β σ]
+    (lhs : α) (rhs : β) : Term .boolean :=
+  compare (rel := .ne) (IntoTerm.intoTerm lhs) (IntoTerm.intoTerm rhs)
 
-def lt (lhs rhs : Term (.scalar d)) : Term .boolean := compare (rel := .lt) lhs rhs
+def lt {α : Type} {β : Type} {d : DomainDesc} [IntoScalarTerm α d] [IntoScalarTerm β d]
+    (lhs : α) (rhs : β) : Term .boolean :=
+  compare (rel := .lt) (IntoTerm.intoTerm lhs) (IntoTerm.intoTerm rhs)
 
-def le (lhs rhs : Term (.scalar d)) : Term .boolean := compare (rel := .le) lhs rhs
+def le {α : Type} {β : Type} {d : DomainDesc} [IntoScalarTerm α d] [IntoScalarTerm β d]
+    (lhs : α) (rhs : β) : Term .boolean :=
+  compare (rel := .le) (IntoTerm.intoTerm lhs) (IntoTerm.intoTerm rhs)
 
-def gt (lhs rhs : Term (.scalar d)) : Term .boolean := compare (rel := .gt) lhs rhs
+def gt {α : Type} {β : Type} {d : DomainDesc} [IntoScalarTerm α d] [IntoScalarTerm β d]
+    (lhs : α) (rhs : β) : Term .boolean :=
+  compare (rel := .gt) (IntoTerm.intoTerm lhs) (IntoTerm.intoTerm rhs)
 
-def ge (lhs rhs : Term (.scalar d)) : Term .boolean := compare (rel := .ge) lhs rhs
+def ge {α : Type} {β : Type} {d : DomainDesc} [IntoScalarTerm α d] [IntoScalarTerm β d]
+    (lhs : α) (rhs : β) : Term .boolean :=
+  compare (rel := .ge) (IntoTerm.intoTerm lhs) (IntoTerm.intoTerm rhs)
 
-def mem (elem : Term σ) (setTerm : Term (.set σ)) : Term .boolean :=
-  Term.headApp (.core (.mem σ)) (.pair elem setTerm)
+def mem {α : Type} {β : Type} {σ : SSort} [IntoTerm α σ] [IntoTerm β (.set σ)]
+    (elem : α) (setTerm : β) : Term .boolean :=
+  Term.headApp (.core (.mem σ)) (.pair (IntoTerm.intoTerm elem) (IntoTerm.intoTerm setTerm))
 
 end SymbolicLean

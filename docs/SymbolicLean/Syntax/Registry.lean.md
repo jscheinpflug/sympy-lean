@@ -6,7 +6,9 @@
 ## Responsibilities
 - Define the symbolic registry entry schema and environment extension.
 - Track registry entries by declaration name for elaboration-time lookup.
-- Provide the shared metadata layer for heads and effectful ops, including backend dispatch paths, call style, optional pure-head specs, aliases, and search categories.
+- Provide the shared metadata layer for heads and effectful ops, including backend dispatch paths, call style, explicit effectful method-vs-namespace dispatch, coarse result-mode classification, optional pure-head specs, aliases, and search categories.
+- Carry closed and supported generic pure-head argument/result sort metadata into the manifest so hover/search and later runtime consumers can see both concrete and parameterized extension-head signatures, including homogeneous variadic heads.
+- Keep `ResultMode` intentionally coarse: the manifest says whether an op is direct, transformed, or structured, while Lean-side `OpPayloadDecode` instances still own the exact payload transport details.
 
 ## Public Surface
 - `RegistryKind`
@@ -15,9 +17,11 @@
 - `ReifyMode`
 - `ResultMode`
 - `CallStyle`
+- `EffectfulDispatch`
 - `PureSpec`
 - `RegistryMetadata`
 - `RegistryEntry`
+- `PureSpec.variadic?` for homogeneous variadic pure heads
 - `addRegistryEntry`
 - `findRegistryEntry?`
 - `registryEntries`

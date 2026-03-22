@@ -53,6 +53,16 @@ declare_scalar_fn₁ floor => "floor" sympy_alias
 declare_scalar_fn₁ ceiling => "ceiling" sympy_alias
   doc "Pure scalar ceiling head backed by SymPy's `ceiling`."
 
+declare_variadic_pure_head Min {d : DomainDesc}
+  for (x : .scalar d) returns (.scalar d) => "Min"
+  sympy_alias
+  doc "Homogeneous variadic scalar minimum head backed by SymPy's `Min`."
+
+declare_variadic_pure_head Max {d : DomainDesc}
+  for (x : .scalar d) returns (.scalar d) => "Max"
+  sympy_alias
+  doc "Homogeneous variadic scalar maximum head backed by SymPy's `Max`."
+
 declare_pure_head re for (z : .scalar (.ground .CC)) returns (.scalar (.ground .RR)) => "re"
   sympy_alias
   doc "Pure complex-real-part head backed by SymPy's `re`."

@@ -117,8 +117,160 @@ instance [CanPow σ (.scalar (.ground .ZZ)) υ] : HPow (Term σ) Nat (Term υ) w
 instance [CanPow σ (.scalar (.ground .ZZ)) υ] : HPow (SymDecl σ) Nat (Term υ) where
   hPow base exp := (base : Term σ) ^ Term.natLit exp
 
+private def natScalarTerm (value : Nat) : Term (.scalar (.ground .ZZ)) := .natLit value
+
+private def intScalarTerm (value : Int) : Term (.scalar (.ground .ZZ)) := .intLit value
+
+private def ratScalarTerm (value : Rat) : Term (.scalar (.ground .QQ)) := .ratLit value
+
+instance [UnifyDomain d (.ground .ZZ) out] : HAdd (Term (.scalar d)) Nat (Term (.scalar out)) where
+  hAdd lhs rhs := lhs + natScalarTerm rhs
+
+instance [UnifyDomain d (.ground .ZZ) out] : HAdd (SymDecl (.scalar d)) Nat (Term (.scalar out)) where
+  hAdd lhs rhs := (lhs : Term (.scalar d)) + natScalarTerm rhs
+
+instance [UnifyDomain (.ground .ZZ) d out] : HAdd Nat (Term (.scalar d)) (Term (.scalar out)) where
+  hAdd lhs rhs := natScalarTerm lhs + rhs
+
+instance [UnifyDomain (.ground .ZZ) d out] : HAdd Nat (SymDecl (.scalar d)) (Term (.scalar out)) where
+  hAdd lhs rhs := natScalarTerm lhs + (rhs : Term (.scalar d))
+
+instance [UnifyDomain d (.ground .ZZ) out] : HAdd (Term (.scalar d)) Int (Term (.scalar out)) where
+  hAdd lhs rhs := lhs + intScalarTerm rhs
+
+instance [UnifyDomain d (.ground .ZZ) out] : HAdd (SymDecl (.scalar d)) Int (Term (.scalar out)) where
+  hAdd lhs rhs := (lhs : Term (.scalar d)) + intScalarTerm rhs
+
+instance [UnifyDomain (.ground .ZZ) d out] : HAdd Int (Term (.scalar d)) (Term (.scalar out)) where
+  hAdd lhs rhs := intScalarTerm lhs + rhs
+
+instance [UnifyDomain (.ground .ZZ) d out] : HAdd Int (SymDecl (.scalar d)) (Term (.scalar out)) where
+  hAdd lhs rhs := intScalarTerm lhs + (rhs : Term (.scalar d))
+
+instance [UnifyDomain d (.ground .QQ) out] : HAdd (Term (.scalar d)) Rat (Term (.scalar out)) where
+  hAdd lhs rhs := lhs + ratScalarTerm rhs
+
+instance [UnifyDomain d (.ground .QQ) out] : HAdd (SymDecl (.scalar d)) Rat (Term (.scalar out)) where
+  hAdd lhs rhs := (lhs : Term (.scalar d)) + ratScalarTerm rhs
+
+instance [UnifyDomain (.ground .QQ) d out] : HAdd Rat (Term (.scalar d)) (Term (.scalar out)) where
+  hAdd lhs rhs := ratScalarTerm lhs + rhs
+
+instance [UnifyDomain (.ground .QQ) d out] : HAdd Rat (SymDecl (.scalar d)) (Term (.scalar out)) where
+  hAdd lhs rhs := ratScalarTerm lhs + (rhs : Term (.scalar d))
+
+instance [UnifyDomain d (.ground .ZZ) out] : HSub (Term (.scalar d)) Nat (Term (.scalar out)) where
+  hSub lhs rhs := lhs - natScalarTerm rhs
+
+instance [UnifyDomain d (.ground .ZZ) out] : HSub (SymDecl (.scalar d)) Nat (Term (.scalar out)) where
+  hSub lhs rhs := (lhs : Term (.scalar d)) - natScalarTerm rhs
+
+instance [UnifyDomain (.ground .ZZ) d out] : HSub Nat (Term (.scalar d)) (Term (.scalar out)) where
+  hSub lhs rhs := natScalarTerm lhs - rhs
+
+instance [UnifyDomain (.ground .ZZ) d out] : HSub Nat (SymDecl (.scalar d)) (Term (.scalar out)) where
+  hSub lhs rhs := natScalarTerm lhs - (rhs : Term (.scalar d))
+
+instance [UnifyDomain d (.ground .ZZ) out] : HSub (Term (.scalar d)) Int (Term (.scalar out)) where
+  hSub lhs rhs := lhs - intScalarTerm rhs
+
+instance [UnifyDomain d (.ground .ZZ) out] : HSub (SymDecl (.scalar d)) Int (Term (.scalar out)) where
+  hSub lhs rhs := (lhs : Term (.scalar d)) - intScalarTerm rhs
+
+instance [UnifyDomain (.ground .ZZ) d out] : HSub Int (Term (.scalar d)) (Term (.scalar out)) where
+  hSub lhs rhs := intScalarTerm lhs - rhs
+
+instance [UnifyDomain (.ground .ZZ) d out] : HSub Int (SymDecl (.scalar d)) (Term (.scalar out)) where
+  hSub lhs rhs := intScalarTerm lhs - (rhs : Term (.scalar d))
+
+instance [UnifyDomain d (.ground .QQ) out] : HSub (Term (.scalar d)) Rat (Term (.scalar out)) where
+  hSub lhs rhs := lhs - ratScalarTerm rhs
+
+instance [UnifyDomain d (.ground .QQ) out] : HSub (SymDecl (.scalar d)) Rat (Term (.scalar out)) where
+  hSub lhs rhs := (lhs : Term (.scalar d)) - ratScalarTerm rhs
+
+instance [UnifyDomain (.ground .QQ) d out] : HSub Rat (Term (.scalar d)) (Term (.scalar out)) where
+  hSub lhs rhs := ratScalarTerm lhs - rhs
+
+instance [UnifyDomain (.ground .QQ) d out] : HSub Rat (SymDecl (.scalar d)) (Term (.scalar out)) where
+  hSub lhs rhs := ratScalarTerm lhs - (rhs : Term (.scalar d))
+
+instance [UnifyDomain d (.ground .ZZ) out] : HMul (Term (.scalar d)) Nat (Term (.scalar out)) where
+  hMul lhs rhs := lhs * natScalarTerm rhs
+
+instance [UnifyDomain d (.ground .ZZ) out] : HMul (SymDecl (.scalar d)) Nat (Term (.scalar out)) where
+  hMul lhs rhs := (lhs : Term (.scalar d)) * natScalarTerm rhs
+
+instance [UnifyDomain (.ground .ZZ) d out] : HMul Nat (Term (.scalar d)) (Term (.scalar out)) where
+  hMul lhs rhs := natScalarTerm lhs * rhs
+
+instance [UnifyDomain (.ground .ZZ) d out] : HMul Nat (SymDecl (.scalar d)) (Term (.scalar out)) where
+  hMul lhs rhs := natScalarTerm lhs * (rhs : Term (.scalar d))
+
+instance [UnifyDomain d (.ground .ZZ) out] : HMul (Term (.scalar d)) Int (Term (.scalar out)) where
+  hMul lhs rhs := lhs * intScalarTerm rhs
+
+instance [UnifyDomain d (.ground .ZZ) out] : HMul (SymDecl (.scalar d)) Int (Term (.scalar out)) where
+  hMul lhs rhs := (lhs : Term (.scalar d)) * intScalarTerm rhs
+
+instance [UnifyDomain (.ground .ZZ) d out] : HMul Int (Term (.scalar d)) (Term (.scalar out)) where
+  hMul lhs rhs := intScalarTerm lhs * rhs
+
+instance [UnifyDomain (.ground .ZZ) d out] : HMul Int (SymDecl (.scalar d)) (Term (.scalar out)) where
+  hMul lhs rhs := intScalarTerm lhs * (rhs : Term (.scalar d))
+
+instance [UnifyDomain d (.ground .QQ) out] : HMul (Term (.scalar d)) Rat (Term (.scalar out)) where
+  hMul lhs rhs := lhs * ratScalarTerm rhs
+
+instance [UnifyDomain d (.ground .QQ) out] : HMul (SymDecl (.scalar d)) Rat (Term (.scalar out)) where
+  hMul lhs rhs := (lhs : Term (.scalar d)) * ratScalarTerm rhs
+
+instance [UnifyDomain (.ground .QQ) d out] : HMul Rat (Term (.scalar d)) (Term (.scalar out)) where
+  hMul lhs rhs := ratScalarTerm lhs * rhs
+
+instance [UnifyDomain (.ground .QQ) d out] : HMul Rat (SymDecl (.scalar d)) (Term (.scalar out)) where
+  hMul lhs rhs := ratScalarTerm lhs * (rhs : Term (.scalar d))
+
+instance [IntoScalarTerm Rat d] : HDiv (Term (.scalar d)) Nat (Term (.scalar d)) where
+  hDiv lhs rhs := lhs / IntoTerm.intoTerm (σ := .scalar d) (rhs : Rat)
+
+instance [IntoScalarTerm Rat d] : HDiv (SymDecl (.scalar d)) Nat (Term (.scalar d)) where
+  hDiv lhs rhs := (lhs : Term (.scalar d)) / IntoTerm.intoTerm (σ := .scalar d) (rhs : Rat)
+
+instance [IntoScalarTerm Rat d] : HDiv Nat (Term (.scalar d)) (Term (.scalar d)) where
+  hDiv lhs rhs := IntoTerm.intoTerm (σ := .scalar d) (lhs : Rat) / rhs
+
+instance [IntoScalarTerm Rat d] : HDiv Nat (SymDecl (.scalar d)) (Term (.scalar d)) where
+  hDiv lhs rhs := IntoTerm.intoTerm (σ := .scalar d) (lhs : Rat) / (rhs : Term (.scalar d))
+
+instance [IntoScalarTerm Rat d] : HDiv (Term (.scalar d)) Int (Term (.scalar d)) where
+  hDiv lhs rhs := lhs / IntoTerm.intoTerm (σ := .scalar d) (rhs : Rat)
+
+instance [IntoScalarTerm Rat d] : HDiv (SymDecl (.scalar d)) Int (Term (.scalar d)) where
+  hDiv lhs rhs := (lhs : Term (.scalar d)) / IntoTerm.intoTerm (σ := .scalar d) (rhs : Rat)
+
+instance [IntoScalarTerm Rat d] : HDiv Int (Term (.scalar d)) (Term (.scalar d)) where
+  hDiv lhs rhs := IntoTerm.intoTerm (σ := .scalar d) (lhs : Rat) / rhs
+
+instance [IntoScalarTerm Rat d] : HDiv Int (SymDecl (.scalar d)) (Term (.scalar d)) where
+  hDiv lhs rhs := IntoTerm.intoTerm (σ := .scalar d) (lhs : Rat) / (rhs : Term (.scalar d))
+
+instance [IntoScalarTerm Rat d] : HDiv (Term (.scalar d)) Rat (Term (.scalar d)) where
+  hDiv lhs rhs := lhs / IntoTerm.intoTerm (σ := .scalar d) rhs
+
+instance [IntoScalarTerm Rat d] : HDiv (SymDecl (.scalar d)) Rat (Term (.scalar d)) where
+  hDiv lhs rhs := (lhs : Term (.scalar d)) / IntoTerm.intoTerm (σ := .scalar d) rhs
+
+instance [IntoScalarTerm Rat d] : HDiv Rat (Term (.scalar d)) (Term (.scalar d)) where
+  hDiv lhs rhs := IntoTerm.intoTerm (σ := .scalar d) lhs / rhs
+
+instance [IntoScalarTerm Rat d] : HDiv Rat (SymDecl (.scalar d)) (Term (.scalar d)) where
+  hDiv lhs rhs := IntoTerm.intoTerm (σ := .scalar d) lhs / (rhs : Term (.scalar d))
+
 example : Term (.scalar (.ground .QQ)) := zz 1 + qq (0 : Rat)
 example : Term (.scalar (.ground .QQ)) := zz 2 - qq (0 : Rat)
 example : Term (.scalar (.ground .QQ)) := zz 3 * qq (0 : Rat)
+example : Term (.scalar (.ground .QQ)) := qq (1 : Rat) / 2
+example : Term (.scalar (.ground .QQ)) := (1 : Rat) / qq (2 : Rat)
 
 end SymbolicLean

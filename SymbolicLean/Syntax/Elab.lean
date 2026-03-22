@@ -194,22 +194,26 @@ def Integral {α : Type} [IntoBoundSpec d α] (body : Term (.scalar d)) (bound :
     Term (.scalar d) :=
   integralWith body (IntoBoundSpec.intoBoundSpec (d := d) bound)
 
-def Limit (body : Term (.scalar d)) (x : SymDecl (.scalar d)) (atPoint : Term (.scalar d)) :
+def Limit {α : Type} [IntoScalarTerm α d]
+    (body : Term (.scalar d)) (x : SymDecl (.scalar d)) (atPoint : α) :
     Term (.scalar d) :=
-  limit body x atPoint
+  limit body x (IntoTerm.intoTerm atPoint)
 
-def Sum {α : Type} [IntoBoundSpec d α] (body : Term (.scalar d)) (bound : α) :
+def Sum {α : Type} {β : Type} [IntoScalarTerm α d] [IntoBoundSpec d β]
+    (body : α) (bound : β) :
     Term (.scalar d) :=
-  summation body (IntoBoundSpec.intoBoundSpec (d := d) bound)
+  summation (IntoTerm.intoTerm body) (IntoBoundSpec.intoBoundSpec (d := d) bound)
 
-def Product {α : Type} [IntoBoundSpec d α] (body : Term (.scalar d)) (bound : α) :
+def Product {α : Type} {β : Type} [IntoScalarTerm α d] [IntoBoundSpec d β]
+    (body : α) (bound : β) :
     Term (.scalar d) :=
-  productTerm body (IntoBoundSpec.intoBoundSpec (d := d) bound)
+  productTerm (IntoTerm.intoTerm body) (IntoBoundSpec.intoBoundSpec (d := d) bound)
 
 def Lambda (body : Term σ) (x : SymDecl (.scalar d)) : Term (.fn [.scalar d] σ) :=
   lambdaTerm body x
 
-def Piecewise {α : Type} [IntoPieceBranch σ α] (branch : α) (fallback : Term σ) : Term σ :=
-  piecewise (IntoPieceBranch.intoPieceBranch (σ := σ) branch) fallback
+def Piecewise {α : Type} {β : Type} [IntoPieceBranch σ α] [IntoTerm β σ]
+    (branch : α) (fallback : β) : Term σ :=
+  piecewise (IntoPieceBranch.intoPieceBranch (σ := σ) branch) (IntoTerm.intoTerm fallback)
 
 end SymbolicLean

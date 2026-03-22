@@ -127,6 +127,15 @@ partial def decodeSort (json : Json) : Except SymPyError SSort := do
   | other => .error <| .decode <| .unexpectedTag other
 
 private abbrev SomeTerm := Sigma Term
+private abbrev SomeArgs := Sigma Args
+
+private def isReservedHeadName (headName : String) : Bool :=
+  headName ∈
+    [ "scalarNeg", "scalarAdd", "scalarSub", "scalarMul", "scalarDiv", "scalarPow"
+    , "matrixAdd", "matrixSub", "matrixMul"
+    , "truth", "not", "and", "or", "implies", "iff"
+    , "relation", "eq", "ne", "lt", "le", "gt", "ge", "membership", "mem"
+    , "diff", "integral", "limit" ]
 
 private def castTerm {σ τ : SSort} (h : σ = τ) (term : Term σ) : Term τ := by
   cases h
@@ -274,31 +283,21 @@ private partial def decodeArgsFor :
       pure <| .cons (← decodeTermAs σ json) (← decodeArgsFor σs jsons)
   | _, _ => malformedE "argument arity mismatch"
 
-private partial def decodeGenericScalarHead
+private partial def decodeGenericArgs : List Json → Except SymPyError SomeArgs
+  | [] => pure ⟨[], .nil⟩
+  | json :: rest => do
+      let ⟨σ, term⟩ ← decodeTermAny json
+      let ⟨σs, args⟩ ← decodeGenericArgs rest
+      pure ⟨σ :: σs, .cons term args⟩
+
+private partial def decodeGenericExtHead
     (headName : String)
-    (out : DomainDesc)
+    (resultSort : SSort)
     (args : List Json) : Except SymPyError SomeTerm := do
-  match args with
-  | [argJson] =>
-      let ⟨argSort, arg⟩ ← decodeTermAny argJson
-      match argSort with
-      | .scalar d =>
-          let spec :
-              ExtHeadSpec { args := [.scalar d], result := .scalar out } :=
-            genericExtHeadSpec headName _
-          pure ⟨_, .headApp (.ext spec) (.singleton arg)⟩
-      | _ => malformedE s!"headApp {headName} expected scalar operand"
-  | [lhsJson, rhsJson] =>
-      let ⟨lhsSort, lhs⟩ ← decodeTermAny lhsJson
-      let ⟨rhsSort, rhs⟩ ← decodeTermAny rhsJson
-      match lhsSort, rhsSort with
-      | .scalar d₁, .scalar d₂ =>
-          let spec :
-              ExtHeadSpec { args := [.scalar d₁, .scalar d₂], result := .scalar out } :=
-            genericExtHeadSpec headName _
-          pure ⟨_, .headApp (.ext spec) (.pair lhs rhs)⟩
-      | _, _ => malformedE s!"headApp {headName} expected scalar operands"
-  | _ => malformedE s!"headApp {headName} expected one or two scalar operands"
+  let ⟨argSorts, decodedArgs⟩ ← decodeGenericArgs args
+  let spec : ExtHeadSpec { args := argSorts, result := resultSort } :=
+    genericExtHeadSpec headName _
+  pure ⟨_, .headApp (.ext spec) decodedArgs⟩
 
 private partial def decodeTermAny (json : Json) : Except SymPyError SomeTerm := do
   let sort ← decodeSort (← getObjVal json "sort")
@@ -448,9 +447,11 @@ private partial def decodeTermAny (json : Json) : Except SymPyError SomeTerm := 
           let value ← decodeTermAs (.scalar d) valueJson
           pure ⟨_, .headApp (.ext (limitHeadSpec d))
             (.cons body (.cons (var : Term (.scalar d)) (.cons value .nil)))⟩
-      | .scalar out, headName, args =>
-          decodeGenericScalarHead headName out args
-      | _, _, _ => malformedE s!"unsupported headApp shape for {headName}"
+      | sort, headName, args =>
+          if isReservedHeadName headName then
+            malformedE s!"unsupported headApp shape for {headName}"
+          else
+            decodeGenericExtHead headName sort args
   | σ, "app" =>
       let ⟨fnSort, fn⟩ ← decodeTermAny (← getObjVal json "fn")
       match fnSort with

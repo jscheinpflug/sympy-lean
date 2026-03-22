@@ -1,4 +1,4 @@
-import SymbolicLean.Term.Core
+import SymbolicLean.Term.Literals
 
 namespace SymbolicLean
 
@@ -59,11 +59,15 @@ instance : IntoBoundSpec d (BoundSpec d) where
 instance : IntoBoundSpec d (BoundVar d) where
   intoBoundSpec := fun value => (value : BoundSpec d)
 
-instance : IntoBoundSpec d (BoundUpper d) where
-  intoBoundSpec := fun value => (value : BoundSpec d)
+instance [IntoScalarTerm α d] : IntoBoundSpec d (SymDecl (.scalar d) × α) where
+  intoBoundSpec value := { var := value.1, upper? := some (IntoTerm.intoTerm value.2) }
 
-instance : IntoBoundSpec d (BoundRange d) where
-  intoBoundSpec := fun value => (value : BoundSpec d)
+instance [IntoScalarTerm α d] [IntoScalarTerm β d] :
+    IntoBoundSpec d (SymDecl (.scalar d) × α × β) where
+  intoBoundSpec value :=
+    { var := value.1
+      lower? := some (IntoTerm.intoTerm value.2.1)
+      upper? := some (IntoTerm.intoTerm value.2.2) }
 
 instance : IntoDerivSpec σ d (DerivSpec σ d) where
   intoDerivSpec := id

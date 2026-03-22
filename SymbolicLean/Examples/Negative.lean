@@ -65,6 +65,18 @@ of sort `Type 1` in the application
   pure ()
 
 /--
+error: failed to synthesize instance of type class
+  OfNat (Term (Scalar ℝ)) 2
+numerals are polymorphic in Lean, but the numeral `2` cannot be used in a context where the expected type is
+  Term (Scalar ℝ)
+due to the absence of the instance above
+
+Hint: Type class instance resolution failures can be inspected with the `set_option trace.Meta.synthInstance true` command.
+-/
+#guard_msgs in
+example : Term (Scalar Real) := 2
+
+/--
 warning: `#sympy` falling back to an undefined scalar function for unresolved qualified head `Foo.bar`
 ---
 info: Foo̅.(x)

@@ -8,6 +8,7 @@
 - Provide operator instances for scalar and matrix arithmetic that stays in the pure layer.
 - Lift the arithmetic surface over declarations so plain-Lean code can write `x + y` and `A * v`.
 - Route scalar mixed-domain `+`, `-`, and `*` through `UnifyDomain`.
+- Provide the current safe rational-domain literal division slice so plain Lean can write forms such as `x / 2` and `(1 : Rat) / x` without explicit `Term` casts.
 - Route arithmetic smart constructors through the `CoreHead`/`headApp` compatibility layer.
 
 ## Public Surface
