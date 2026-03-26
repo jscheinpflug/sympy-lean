@@ -11,6 +11,7 @@
 - Reuse the shared embedded-ref decode helpers for finite `solve` payloads instead of carrying a solver-local ref parser.
 - Mark the structured solver payload entry points with manifest-visible `result_mode structured` so hover/manifest output matches the decoder path.
 - Keep the low-level realized-object entry points separate from the later conversion layer in `Ops/Core`, where `solve` becomes the canonical public front door and `solveUnivariate` remains a compatibility alias.
+- Encode the current `Assumption` vocabulary for `ask`, including the expanded sign, parity, primality, and finiteness-facing query set.
 
 ## Public Surface
 - `solveUnivariateExpr`

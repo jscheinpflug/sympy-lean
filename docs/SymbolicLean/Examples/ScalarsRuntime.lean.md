@@ -7,11 +7,11 @@
 - Batch the deeper scalar runtime smoke tests into two backend sessions so the main `Examples/Scalars.lean` file stays fast enough to run standalone.
 - Exercise public scalar runtime fronts such as `factor`, field-notation methods, `SymPy.*` wrappers, cancellation, substitution, and rational mixed division through actual worker calls.
 - Exercise the generic `[FromJson String]` effectful decode path with `Smoke.sreprText`.
-- Exercise cache reuse, `realize`, and `reify` round trips for arithmetic, relations, unevaluated calculus heads, effectful simplification, and registry-backed smoke heads.
+- Exercise cache reuse, `realize`, and `reify` round trips for arithmetic, relations, unevaluated calculus heads, effectful simplification, and registry-backed smoke heads, including the duplicate-backend pure-head identity path.
 
 ## Public Surface
 - Executable runtime smoke for `factor`, `expr.factor`, `SymPy.simplify`, `pretty`, `cancel`, substitution, `Smoke.smokeUnary`, `Smoke.smokeBinary`, `Smoke.sreprText`, and mixed rational division.
-- Executable reify/cache-reuse smoke for `realize`, `reify`, `SymPy.Integral`, `simplify`, and the registry-backed smoke heads.
+- Executable reify/cache-reuse smoke for `realize`, `reify`, `SymPy.Integral`, `simplify`, and the registry-backed smoke heads, including duplicate-backend unary declarations that both lower to `sin`.
 
 ## Change Triggers
 - Scalar runtime example latency regresses.

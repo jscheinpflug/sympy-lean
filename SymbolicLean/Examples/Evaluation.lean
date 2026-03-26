@@ -8,6 +8,8 @@ open SymbolicLean
 #sympy_hover "ask"
 #sympy_hover "Smoke.latexModeText"
 #sympy_hover "differentiate"
+#sympy_hover "limitExpr"
+#sympy_hover "seriesExprCore"
 #sympy_search "latex"
 
 example {s : SessionTok} (x : SymDecl (Scalar Rat)) : SymPyM s String :=
@@ -32,6 +34,26 @@ example {s : SessionTok} (x : SymExpr s (Scalar Rat)) : SymPyM s (SymExpr s (Sca
     symbols (x : Rat)
     let derived ← differentiate (x ^ 3 : Term (Scalar Rat)) x 2
     pretty derived
+  match result with
+  | .ok text => IO.println text
+  | .error err => IO.println (repr err)
+
+-- `limit` is the eager front door for realized scalar limits.
+#eval do
+  let result ← sympy Rat do
+    symbols (x : Rat)
+    let approached ← limit ((SymPy.sin x) / x : Term (Scalar Rat)) x (0 : Rat)
+    pretty approached
+  match result with
+  | .ok text => IO.println text
+  | .error err => IO.println (repr err)
+
+-- `series` eagerly computes a realized series expansion around a point.
+#eval do
+  let result ← sympy Rat do
+    symbols (x : Rat)
+    let expanded ← series (SymPy.sin x : Term (Scalar Rat)) x (0 : Rat) 6
+    pretty expanded
   match result with
   | .ok text => IO.println text
   | .error err => IO.println (repr err)

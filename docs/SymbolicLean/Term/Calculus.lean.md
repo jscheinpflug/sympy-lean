@@ -16,7 +16,7 @@
 - `limitHeadSpec`
 - `diff`
 - `integral`
-- `limit`
+- `limitTerm`
 
 ## Change Triggers
 - Pure calculus coverage changes.

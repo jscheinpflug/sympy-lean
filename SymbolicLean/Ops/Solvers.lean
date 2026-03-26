@@ -36,13 +36,22 @@ private def decodeModelAssignments (payload : Json) : Except SymPyError (List Sa
 
 private def encodeAssumptionQuery : Assumption → Json
   | .positive => toJson "positive"
+  | .negative => toJson "negative"
   | .nonnegative => toJson "nonnegative"
+  | .nonpositive => toJson "nonpositive"
   | .nonzero => toJson "nonzero"
+  | .zero => toJson "zero"
   | .integer => toJson "integer"
   | .rational => toJson "rational"
+  | .irrational => toJson "irrational"
   | .real => toJson "real"
   | .complex => toJson "complex"
+  | .imaginary => toJson "imaginary"
+  | .odd => toJson "odd"
+  | .even => toJson "even"
   | .finite => toJson "finite"
+  | .infinite => toJson "infinite"
+  | .prime => toJson "prime"
   | .invertible => toJson "invertible"
 
 instance {s : SessionTok} : OpPayloadDecode s SatisfiableResult where

@@ -9,7 +9,7 @@
 - Keep the distinction clear between pure symbolic builders and effectful `SymPyM` calls that still belong in executable examples.
 
 ## Public Surface
-- Proof examples for `SymPy.Derivative`, `SymPy.Integral`, `SymPy.Sum`, `SymPy.Product`, `SymPy.Limit`, and `SymPy.Piecewise`, using the simplified literal-bound, literal-endpoint, and relation-builder surface where inference now permits it.
+- Proof examples for `SymPy.Derivative`, `SymPy.Integral`, `SymPy.Sum`, `SymPy.Product`, `SymPy.Limit`, and `SymPy.Piecewise`, using the simplified literal-bound, literal-endpoint, and relation-builder surface where inference now permits it, with the `Limit` witness checking against the shared `limitTerm` builder.
 - Proof examples that use a `SymPy.*`-built term as a subterm inside a larger proposition.
 
 ## Change Triggers

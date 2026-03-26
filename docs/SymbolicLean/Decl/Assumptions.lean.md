@@ -7,6 +7,7 @@
 - Define the pure assumption vocabulary attached to symbolic declarations.
 - Provide typed assumption facts that are stable before any backend session exists.
 - Keep declaration assumptions serializable across the backend protocol boundary.
+- Carry the canonical `Q.*` query vocabulary used by `ask`, binder assumptions, and scoped `assuming [...]` workflows.
 
 ## Public Surface
 - `Assumption`
@@ -17,6 +18,7 @@
 - Assumption vocabulary changes.
 - Declaration identity changes that require richer assumption facts.
 - Backend realization requirements for assumptions.
+- Public `SymPy.Q.*` coverage grows.
 
 ## Related Files
 - [`Core.lean.md`](Core.lean.md)

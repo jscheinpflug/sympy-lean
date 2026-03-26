@@ -10,6 +10,7 @@
 - Decode the post-migration `headApp` transport for symbolic heads.
 - Preserve calculus extension heads as stored `headApp` terms when they arrive through generic reification.
 - Decode generic fixed-arity extension heads into `Term.headApp` values using the emitted result sort plus decoded argument sorts.
+- Prefer emitted extension `declName` metadata over bare backend spelling when rebuilding generic extension heads, so duplicate backend names stay distinguishable after reify/decode.
 - Keep core arithmetic, logic, relation, and calculus heads on explicit decode branches so malformed core payloads still fail loudly.
 - Support nullary attr constants and the current set-returning generic extension slice through the same fallback.
 - Keep homogeneous variadic and broader matrix/container extension-head decode out of the generic fallback until that public surface exists.

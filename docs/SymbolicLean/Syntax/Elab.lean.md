@@ -9,6 +9,7 @@
 - Centralize named-argument splitting and error routing for the symbolic call surface.
 - Accept both raw structured specs and the simpler tuple/decl forms supported by the structured-argument conversion layer.
 - Let `Limit` and `Piecewise` reuse the ordinary scalar/general `IntoTerm` conversions so literal endpoints and fallbacks do not need explicit `Term` ascriptions.
+- Keep the plain-Lean `Limit` helper aligned with the registry-backed `limitTerm` builder instead of the lower-level core constructor namespace.
 
 ## Public Surface
 - `symcall% name(...)`

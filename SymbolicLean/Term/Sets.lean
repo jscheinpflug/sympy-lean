@@ -33,8 +33,32 @@ declare_pure_head Reals returns (.set (.scalar (.ground .RR))) => "S.Reals"
   call_style attr
   doc "Pure real-number set constant backed by SymPy's `S.Reals`."
 
+declare_pure_head Complexes returns (.set (.scalar (.ground .CC))) => "S.Complexes"
+  call_style attr
+  doc "Pure complex-number set constant backed by SymPy's `S.Complexes`."
+
+declare_pure_head Rationals returns (.set (.scalar (.ground .QQ))) => "S.Rationals"
+  call_style attr
+  doc "Pure rational-number set constant backed by SymPy's `S.Rationals`."
+
 declare_pure_head Integers returns (.set (.scalar (.ground .ZZ))) => "S.Integers"
   call_style attr
   doc "Pure integer set constant backed by SymPy's `S.Integers`."
+
+declare_pure_head Naturals returns (.set (.scalar (.ground .ZZ))) => "S.Naturals"
+  call_style attr
+  doc "Pure natural-number set constant backed by SymPy's `S.Naturals`."
+
+declare_pure_head Naturals0 returns (.set (.scalar (.ground .ZZ))) => "S.Naturals0"
+  call_style attr
+  doc "Pure natural-number-with-zero set constant backed by SymPy's `S.Naturals0`."
+
+declare_pure_head EmptySet {d : DomainDesc} returns (.set (.scalar d)) => "S.EmptySet"
+  call_style attr
+  doc "Pure empty-set constant specialized to the requested scalar element domain."
+
+declare_pure_head UniversalSet {d : DomainDesc} returns (.set (.scalar d)) => "S.UniversalSet"
+  call_style attr
+  doc "Pure universal-set constant specialized to the requested scalar element domain."
 
 end SymbolicLean

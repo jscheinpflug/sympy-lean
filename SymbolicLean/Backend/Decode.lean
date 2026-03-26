@@ -42,6 +42,14 @@ private def getObjVal (json : Json) (field : String) : Except SymPyError Json :=
 private def decodeFieldAs [FromJson α] (json : Json) (field : String) : Except SymPyError α := do
   decodeJsonAs (← getObjVal json field)
 
+private def decodeOptionalStringField (json : Json) (field : String) :
+    Except SymPyError (Option String) :=
+  match json.getObjVal? field with
+  | .ok (.str value) => pure (some value)
+  | .ok .null => pure none
+  | .ok _ => malformedE s!"expected string or null for field {field}"
+  | .error _ => pure none
+
 private def decodeArray (json : Json) : Except SymPyError (List Json) :=
   match json with
   | .arr values => pure values.toList
@@ -248,15 +256,22 @@ private def decodeFunDecl (args : List SSort) (ret : SSort) (json : Json) :
     Except SymPyError (FunDecl args ret) := do
   pure { name := (← decodeFieldAs json "name") }
 
-private def decodeHeadIdentity (json : Json) : Except SymPyError (String × Json) := do
+private def nameFromDotted (name : String) : Lean.Name :=
+  name.splitOn "." |>.foldl (init := Lean.Name.anonymous) fun acc part =>
+    if part.isEmpty then acc else Lean.Name.str acc part
+
+private def decodeHeadIdentity (json : Json) : Except SymPyError (String × Option String × Json) := do
   match json with
-  | .str name => pure (name, Json.mkObj [])
+  | .str name => pure (name, none, Json.mkObj [])
   | .obj _ =>
-      pure ((← decodeFieldAs json "name"), json)
+      pure ((← decodeFieldAs json "name"), (← decodeOptionalStringField json "declName"), json)
   | _ => malformedE "headApp head identity must be a string or object"
 
-private def genericExtHeadSpec (headName : String) (schema : HeadSchema) : ExtHeadSpec schema :=
-  { name := Lean.Name.mkSimple headName }
+private def genericExtHeadSpec
+    (headName : String)
+    (declName? : Option String)
+    (schema : HeadSchema) : ExtHeadSpec schema :=
+  { name := declName?.map nameFromDotted |>.getD (Lean.Name.mkSimple headName) }
 
 noncomputable section
 
@@ -292,11 +307,12 @@ private partial def decodeGenericArgs : List Json → Except SymPyError SomeArgs
 
 private partial def decodeGenericExtHead
     (headName : String)
+    (declName? : Option String)
     (resultSort : SSort)
     (args : List Json) : Except SymPyError SomeTerm := do
   let ⟨argSorts, decodedArgs⟩ ← decodeGenericArgs args
   let spec : ExtHeadSpec { args := argSorts, result := resultSort } :=
-    genericExtHeadSpec headName _
+    genericExtHeadSpec headName declName? _
   pure ⟨_, .headApp (.ext spec) decodedArgs⟩
 
 private partial def decodeTermAny (json : Json) : Except SymPyError SomeTerm := do
@@ -314,7 +330,7 @@ private partial def decodeTermAny (json : Json) : Except SymPyError SomeTerm := 
   | .fn args ret, "atomFun" =>
       pure ⟨_, .atom (.fun_ (← decodeFunDecl args ret json))⟩
   | sort, "headApp" =>
-      let (headName, headInfo) ← decodeHeadIdentity (← getObjVal json "head")
+      let (headName, declName?, headInfo) ← decodeHeadIdentity (← getObjVal json "head")
       let args := ← decodeArray (← getObjVal json "args")
       match sort, headName, args with
       | .scalar d, "scalarNeg", [arg] =>
@@ -451,7 +467,7 @@ private partial def decodeTermAny (json : Json) : Except SymPyError SomeTerm := 
           if isReservedHeadName headName then
             malformedE s!"unsupported headApp shape for {headName}"
           else
-            decodeGenericExtHead headName sort args
+            decodeGenericExtHead headName declName? sort args
   | σ, "app" =>
       let ⟨fnSort, fn⟩ ← decodeTermAny (← getObjVal json "fn")
       match fnSort with

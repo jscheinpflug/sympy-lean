@@ -116,10 +116,10 @@ private def expandBackendCall
       | _ => throwCallError backend "expected one or two arguments"
   | "limit" =>
       match positional.toList with
-      | [body, var, atPoint] => `(term| SymbolicLean.limit $body $var $atPoint)
+      | [body, var, atPoint] => `(term| SymbolicLean.limitTerm $body $var $atPoint)
       | [body] =>
           match findNamed? named "var", findNamed? named "at" with
-          | some var, some atPoint => `(term| SymbolicLean.limit $body $var $atPoint)
+          | some var, some atPoint => `(term| SymbolicLean.limitTerm $body $var $atPoint)
           | _, _ =>
               throwCallError backend
                 "expected `Limit body var at` or named `var` and `at`"
@@ -197,7 +197,7 @@ def Integral {α : Type} [IntoBoundSpec d α] (body : Term (.scalar d)) (bound :
 def Limit {α : Type} [IntoScalarTerm α d]
     (body : Term (.scalar d)) (x : SymDecl (.scalar d)) (atPoint : α) :
     Term (.scalar d) :=
-  limit body x (IntoTerm.intoTerm atPoint)
+  limitTerm body x (IntoTerm.intoTerm atPoint)
 
 def Sum {α : Type} {β : Type} [IntoScalarTerm α d] [IntoBoundSpec d β]
     (body : α) (bound : β) :

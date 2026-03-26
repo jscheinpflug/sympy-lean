@@ -8,6 +8,7 @@
 - Accept pure declarations and small scalar literals directly where the public op layer expects realized expressions.
 - Provide `realize` as the canonical public helper for crossing from pure declarations/terms into realized `SymExpr` values, with `eval` remaining the lower-level backend primitive.
 - Generate the front-door wrappers that back type-namespaced Lean field notation for unary methods, multi-argument methods, receiver properties, and pure `SymPy` heads.
+- Keep eager `limit` off the `Term.*` receiver namespace because `Term.limit` is already the pure core constructor name; the eager front door remains top-level plus `SymExpr` / `SymDecl` receiver methods.
 - Carry those method/property-style wrappers across algebra, calculus, evaluation/render, linear algebra, solver, and minimal set-facing front-door APIs.
 - Generate the scoped `SymPy`, `SymPy.Q`, and `SymPy.S` namespace surface so short names do not leak into the global namespace.
 - Keep the conversion logic explicit and reusable without collapsing the pure/effectful architecture.
@@ -31,6 +32,8 @@
 - `latex`
 - `integrate`
 - `differentiate`
+- `limit`
+- `series`
 - `solve`
 - `solveUnivariate`
 - `solveset`
@@ -40,7 +43,9 @@
 - `T`
 - `I`
 - `det`
+- `rank`
 - `trace`
+- `adjugate`
 - `rref`
 - `SymPy.pretty`
 - `SymPy.realize`
@@ -53,11 +58,15 @@
 - `SymPy.cancel`
 - `SymPy.integrate`
 - `SymPy.differentiate`
+- `SymPy.limit`
+- `SymPy.series`
 - `SymPy.solve`
 - `SymPy.T`
 - `SymPy.I`
 - `SymPy.det`
+- `SymPy.rank`
 - `SymPy.trace`
+- `SymPy.adjugate`
 - `SymPy.rref`
 - `SymPy.Derivative`
 - `SymPy.Integral`
@@ -69,7 +78,13 @@
 - `SymPy.S.true_`
 - `SymPy.S.false_`
 - `SymPy.S.Reals`
+- `SymPy.S.Complexes`
+- `SymPy.S.Rationals`
 - `SymPy.S.Integers`
+- `SymPy.S.Naturals`
+- `SymPy.S.Naturals0`
+- `SymPy.S.EmptySet`
+- `SymPy.S.UniversalSet`
 - `Term.realize`
 - `Term.pretty`
 - `Term.doit`
@@ -77,9 +92,12 @@
 - `Term.latex`
 - `Term.integrate`
 - `Term.differentiate`
+- `Term.series`
 - `Term.solve`
 - `Term.det`
+- `Term.rank`
 - `Term.trace`
+- `Term.adjugate`
 - `Term.rref`
 - `Term.solveUnivariate`
 - `Term.solveset`
@@ -92,9 +110,13 @@
 - `SymExpr.latex`
 - `SymExpr.integrate`
 - `SymExpr.differentiate`
+- `SymExpr.limit`
+- `SymExpr.series`
 - `SymExpr.solve`
 - `SymExpr.det`
+- `SymExpr.rank`
 - `SymExpr.trace`
+- `SymExpr.adjugate`
 - `SymExpr.rref`
 - `SymExpr.solveUnivariate`
 - `SymExpr.solveset`
@@ -107,11 +129,15 @@
 - `SymDecl.latex`
 - `SymDecl.integrate`
 - `SymDecl.differentiate`
+- `SymDecl.limit`
+- `SymDecl.series`
 - `SymDecl.solve`
 - `SymDecl.solveUnivariate`
 - `SymDecl.solveset`
 - `SymDecl.det`
+- `SymDecl.rank`
 - `SymDecl.trace`
+- `SymDecl.adjugate`
 - `SymDecl.rref`
 - `SymDecl.ask`
 

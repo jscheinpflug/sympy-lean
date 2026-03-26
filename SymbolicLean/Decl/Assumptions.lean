@@ -6,13 +6,22 @@ open Lean
 
 inductive Assumption where
   | positive
+  | negative
   | nonnegative
+  | nonpositive
   | nonzero
+  | zero
   | integer
   | rational
+  | irrational
   | real
   | complex
+  | imaginary
+  | odd
+  | even
   | finite
+  | infinite
+  | prime
   | invertible
   deriving Repr, DecidableEq, BEq, Hashable, ToJson, FromJson
 

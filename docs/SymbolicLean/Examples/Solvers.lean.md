@@ -13,8 +13,8 @@
 - Smoke-test scoped assumptions through ordinary Lean `assuming [...] do ...`.
 
 ## Public Surface
-- Typechecking examples for `SymPy.Interval`, `SymPy.Union`, `SymPy.FiniteSet`, `SymPy.S.Reals`, and `SymPy.S.Integers`, including signed literal interval bounds.
-- Executable examples for canonical `solve`, compatibility `solveUnivariate`, `solveset`, `dsolve`, `satisfiable`, and `ask`, including `sympy Rat do`, `SymPy.Derivative`, `SymPy.S.true_`, `SymPy.Q.positive`, pure set pretty-printing for symbolic and concrete intervals/unions/finite sets, manifest-driven `reify` round-trips for `Interval`, `FiniteSet`, and `SymPy.S.Reals`, solver field notation such as `.solve`, `.satisfiable`, and `.ask`, and scoped assumptions via `assuming [...] do ...`.
+- Typechecking examples for `SymPy.Interval`, `SymPy.Union`, `SymPy.FiniteSet`, and the expanded `SymPy.S.*` constant slice including `Reals`, `Complexes`, `Rationals`, `Integers`, `Naturals`, `Naturals0`, `EmptySet`, and `UniversalSet`, plus signed literal interval bounds.
+- Executable examples for canonical `solve`, compatibility `solveUnivariate`, `solveset`, `dsolve`, `satisfiable`, and `ask`, including `sympy Rat do`, `SymPy.Derivative`, `SymPy.S.true_`, expanded `SymPy.Q.*` queries such as `positive`, `negative`, `even`, and `nonpositive`, pure set pretty-printing for symbolic and concrete intervals/unions/finite sets and the new `SymPy.S.*` constants, manifest-driven `reify` round-trips for `Interval`, `FiniteSet`, and `SymPy.S.Reals`, solver field notation such as `.solve`, `.satisfiable`, and `.ask`, and scoped assumptions via `assuming [...] do ...`.
 
 ## Change Triggers
 - Solver result containers change.

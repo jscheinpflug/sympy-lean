@@ -4,6 +4,7 @@ open SymbolicLean
 
 #sympy_hover "Min"
 #sympy_hover "Max"
+#sympy_hover "gamma"
 
 private def sameEncodedTerm (lhs rhs : Term σ) : Bool :=
   (encodeTerm lhs).compress == (encodeTerm rhs).compress
@@ -11,6 +12,10 @@ private def sameEncodedTerm (lhs rhs : Term σ) : Bool :=
 example : Term (Scalar Rat) :=
   let x : SymDecl (Scalar Rat) := sym `x
   SymPy.sin x + SymPy.cos x
+
+example : Term (Scalar Rat) :=
+  let x : SymDecl (Scalar Rat) := sym `x
+  SymPy.cot x + SymPy.sec x + SymPy.csc x
 
 example : Term (Scalar Rat) :=
   let x : SymDecl (Scalar Rat) := sym `x
@@ -34,6 +39,18 @@ example : Term (Scalar Rat) :=
 example : Term (Scalar Rat) :=
   let x : SymDecl (Scalar Rat) := sym `x
   SymPy.exp x + SymPy.log (x + 1)
+
+example : Term (Scalar Rat) :=
+  let x : SymDecl (Scalar Rat) := sym `x
+  SymPy.asinh x + SymPy.acosh (x + 1) + SymPy.atanh (x / 2)
+
+example : Term (Scalar Rat) :=
+  let x : SymDecl (Scalar Rat) := sym `x
+  SymPy.erf x + SymPy.erfc x
+
+example : Term (Scalar Rat) :=
+  let x : SymDecl (Scalar Rat) := sym `x
+  SymPy.gamma x + SymPy.loggamma (x + 1) + SymPy.factorial x
 
 noncomputable section
 
@@ -61,7 +78,8 @@ example : Term (.scalar (.ground .RR)) :=
   let result ← sympy Rat do
     symbols (x : Rat) (y : Rat)
     let expr : Term (Scalar Rat) :=
-      SymPy.sin x + SymPy.cos y + SymPy.sqrt (x + 1) +
+      SymPy.sin x + SymPy.cot y + SymPy.asinh x + SymPy.erf y +
+        SymPy.gamma (x + 1) + SymPy.factorial x + SymPy.sqrt (x + 1) +
         SymPy.Min ([x, y, (1 : Term (Scalar Rat))] : List (Term (Scalar Rat)))
     let simplified ← simplify expr
     pretty simplified
@@ -114,6 +132,18 @@ noncomputable section
     symbols (x : Rat) (y : Rat)
     let term : Term (Scalar Rat) :=
       SymPy.Max ([x, y, (1 : Term (Scalar Rat))] : List (Term (Scalar Rat)))
+    let simplified ← simplify term
+    let reified ← reify simplified
+    pure (sameEncodedTerm reified term.canonicalize)
+  match result with
+  | .ok ok => IO.println ok
+  | .error err => IO.println (repr err)
+
+-- The larger unary batch also round-trips through the same generic manifest-driven path.
+#eval do
+  let result ← sympy Rat do
+    symbols (x : Rat)
+    let term : Term (Scalar Rat) := SymPy.gamma (x + 1)
     let simplified ← simplify term
     let reified ← reify simplified
     pure (sameEncodedTerm reified term.canonicalize)

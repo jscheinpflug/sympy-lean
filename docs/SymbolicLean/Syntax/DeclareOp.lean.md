@@ -12,6 +12,7 @@
 - Provide the reusable `IntoPureTerm` conversion layer so generated pure-head helpers can accept plain `Term` values, `SymDecl`s, and the currently supported scalar literal inputs.
 - Generate both ref-returning wrappers and JSON-decoding wrappers from the same `declare_op` command family.
 - Provide small keyword-argument helpers for hand-written effectful wrappers through `OpKwArg`, `opKwArg`, and `encodeKwArgs`.
+- Encode the full public `Assumption` vocabulary as op arguments so effectful wrappers like `ask` stay aligned with binder/query surface growth.
 - Provide shared embedded-ref decode helpers (`OpJsonRef`, `decodeEmbeddedRef`, `decodeEmbeddedRefList`, `decodeJsonArray2`) plus small session bookkeeping helpers (`rememberLiveRef`, `rememberLiveRefs`) for effectful payload decoders.
 - Provide a low-priority generic `OpPayloadDecode` fallback for payload types with `[FromJson α]`, along with generic `Ref`, `List Ref`, and `(Ref × α)` payload instances, while leaving bespoke structured decoders available for richer semantic payloads.
 - Let effectful registrations override coarse manifest-visible `result_mode` classification without changing the typed Lean decoder that actually consumes the payload.

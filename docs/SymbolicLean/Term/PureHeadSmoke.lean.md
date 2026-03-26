@@ -6,12 +6,15 @@
 ## Responsibilities
 - Define library-imported smoke declarations for generated pure heads.
 - Keep one unary and one binary scalar declaration available to exercise registry-backed pure-head evaluation end to end.
+- Keep a duplicate-backend unary pair available to exercise reify identity when two declared heads share the same backend name.
 - Keep one string-decoding effectful smoke op available to exercise the generic `[FromJson α]` payload path end to end.
 - Keep hand-written effectful smoke wrappers available to exercise manifest-driven method/namespace dispatch, dotted backend paths, and keyword forwarding.
 - Expose a minimal `SymPy.*` alias smoke path without committing to the broader special-function surface yet.
 
 ## Public Surface
 - `SymbolicLean.Smoke.smokeUnary`
+- `SymbolicLean.Smoke.smokeUnaryDupA`
+- `SymbolicLean.Smoke.smokeUnaryDupB`
 - `SymbolicLean.Smoke.smokeBinary`
 - `SymbolicLean.Smoke.sreprText`
 - `SymbolicLean.Smoke.sreprDottedText`

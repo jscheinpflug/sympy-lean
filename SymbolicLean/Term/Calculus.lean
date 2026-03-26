@@ -21,7 +21,7 @@ def diff (body : Term σ) (x : SymDecl (.scalar d)) (order : Nat := 1) : Term σ
 def integral (body : Term (.scalar d)) (x : SymDecl (.scalar d)) : Term (.scalar d) :=
   .headApp (.ext (integralHeadSpec d)) (.pair body (x : Term (.scalar d)))
 
-def limit (body : Term (.scalar d)) (x : SymDecl (.scalar d)) (atPoint : Term (.scalar d)) :
+def limitTerm (body : Term (.scalar d)) (x : SymDecl (.scalar d)) (atPoint : Term (.scalar d)) :
     Term (.scalar d) :=
   .headApp (.ext (limitHeadSpec d))
     (.cons body (.cons (x : Term (.scalar d)) (.cons atPoint .nil)))

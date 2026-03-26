@@ -56,10 +56,10 @@ Lean:
 SymPy:
 
 ```python
-from sympy import Min, atan2, sin, sqrt, symbols
+from sympy import Min, asinh, atan2, cot, gamma, sin, sqrt, symbols
 x, y = symbols("x y")
 
-sin(x) + sqrt(x + 1) + atan2(x, y) + Min(1, x, y)
+sin(x) + cot(y) + asinh(x) + gamma(x + 1) + sqrt(x + 1) + atan2(x, y) + Min(1, x, y)
 ```
 
 Lean:
@@ -68,7 +68,8 @@ Lean:
 example : Term (Scalar Rat) :=
   let x : SymDecl (Scalar Rat) := sym `x
   let y : SymDecl (Scalar Rat) := sym `y
-  SymPy.sin x + SymPy.sqrt (x + 1) + SymPy.atan2 x y +
+  SymPy.sin x + SymPy.cot y + SymPy.asinh x + SymPy.gamma (x + 1) +
+    SymPy.sqrt (x + 1) + SymPy.atan2 x y +
     SymPy.Min ([x, y, (1 : Term (Scalar Rat))] : List (Term (Scalar Rat)))
 ```
 
@@ -102,10 +103,11 @@ Lean:
 SymPy:
 
 ```python
-from sympy import diff, symbols
+from sympy import diff, limit, symbols
 x = symbols("x")
 
 diff(x**3, x, 2)
+limit(sin(x)/x, x, 0)
 ```
 
 Lean:
@@ -115,7 +117,8 @@ Lean:
   let result ← sympy Rat do
     symbols (x : Rat)
     let derived ← differentiate (x ^ 3 : Term (Scalar Rat)) x 2
-    pretty derived
+    let approached ← limit ((SymPy.sin x) / x : Term (Scalar Rat)) x (0 : Rat)
+    pure s!"{← pretty derived}\n{← pretty approached}"
   match result with
   | .ok text => IO.println text
   | .error err => IO.println (repr err)
@@ -158,12 +161,14 @@ Lean:
 SymPy:
 
 ```python
-from sympy import FiniteSet, Interval, Q, ask, symbols
-x = symbols("x", positive=True)
+from sympy import EmptySet, FiniteSet, Interval, Naturals, Q, ask, symbols
+x = symbols("x", nonpositive=True)
 
 Interval(0, x)
 FiniteSet(1, x)
-ask(Q.positive(x))
+Naturals
+EmptySet
+ask(Q.nonpositive(x))
 ```
 
 Lean:
@@ -171,12 +176,14 @@ Lean:
 ```lean
 #eval do
   let result ← sympy Rat do
-    symbols (x : Rat | positive)
+    symbols (x : Rat | nonpositive)
     let intervalText ← pretty (SymPy.Interval 0 x)
     let finiteText ←
       pretty (SymPy.FiniteSet ([x, (1 : Term (Scalar Rat))] : List (Term (Scalar Rat))))
-    let answer ← x.ask SymPy.Q.positive
-    pure s!"{intervalText}\n{finiteText}\n{repr answer}"
+    let naturalsText ← pretty (SymPy.S.Naturals : Term (.set (.scalar (.ground .ZZ))))
+    let emptyText ← pretty (SymPy.S.EmptySet : Term (.set (.scalar (.ground .QQ))))
+    let answer ← x.ask SymPy.Q.nonpositive
+    pure s!"{intervalText}\n{finiteText}\n{naturalsText}\n{emptyText}\n{repr answer}"
   match result with
   | .ok text => IO.println text
   | .error err => IO.println (repr err)
@@ -192,6 +199,8 @@ A = MatrixSymbol("A", 2, 2)
 
 Trace(A)
 trace(A)
+A.rank()
+A.adjugate()
 ```
 
 Lean:
@@ -205,7 +214,9 @@ example : Term (Scalar Rat) :=
   let result ← withSession {} fun _s => do
     symbols (A : Mat Rat 2 2)
     let tr ← trace A
-    pretty tr
+    let rk ← rank A
+    let cofactors ← adjugate A
+    pure s!"trace={← pretty tr}\nrank={← pretty rk}\nadjugate={← pretty cofactors}"
   match result with
   | .ok text => IO.println text
   | .error err => IO.println (repr err)

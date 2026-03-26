@@ -21,13 +21,22 @@ def mkDefaultFunction [inst : DefaultScalarDomain] (name : Name) :
 declare_syntax_cat sympyAssumption
 
 syntax "positive" : sympyAssumption
+syntax "negative" : sympyAssumption
 syntax "nonnegative" : sympyAssumption
+syntax "nonpositive" : sympyAssumption
 syntax "nonzero" : sympyAssumption
+syntax "zero" : sympyAssumption
 syntax "integer" : sympyAssumption
 syntax "rational" : sympyAssumption
+syntax "irrational" : sympyAssumption
 syntax "real" : sympyAssumption
 syntax "complex" : sympyAssumption
+syntax "imaginary" : sympyAssumption
+syntax "odd" : sympyAssumption
+syntax "even" : sympyAssumption
 syntax "finite" : sympyAssumption
+syntax "infinite" : sympyAssumption
+syntax "prime" : sympyAssumption
 syntax "invertible" : sympyAssumption
 
 declare_syntax_cat symSymbolBinder
@@ -54,20 +63,38 @@ private def assumptionFactSyntax (stx : TSyntax `sympyAssumption) : MacroM (TSyn
   match stx with
   | `(sympyAssumption| positive) =>
       `({ assumption := Assumption.positive : AssumptionFact })
+  | `(sympyAssumption| negative) =>
+      `({ assumption := Assumption.negative : AssumptionFact })
   | `(sympyAssumption| nonnegative) =>
       `({ assumption := Assumption.nonnegative : AssumptionFact })
+  | `(sympyAssumption| nonpositive) =>
+      `({ assumption := Assumption.nonpositive : AssumptionFact })
   | `(sympyAssumption| nonzero) =>
       `({ assumption := Assumption.nonzero : AssumptionFact })
+  | `(sympyAssumption| zero) =>
+      `({ assumption := Assumption.zero : AssumptionFact })
   | `(sympyAssumption| integer) =>
       `({ assumption := Assumption.integer : AssumptionFact })
   | `(sympyAssumption| rational) =>
       `({ assumption := Assumption.rational : AssumptionFact })
+  | `(sympyAssumption| irrational) =>
+      `({ assumption := Assumption.irrational : AssumptionFact })
   | `(sympyAssumption| real) =>
       `({ assumption := Assumption.real : AssumptionFact })
   | `(sympyAssumption| complex) =>
       `({ assumption := Assumption.complex : AssumptionFact })
+  | `(sympyAssumption| imaginary) =>
+      `({ assumption := Assumption.imaginary : AssumptionFact })
+  | `(sympyAssumption| odd) =>
+      `({ assumption := Assumption.odd : AssumptionFact })
+  | `(sympyAssumption| even) =>
+      `({ assumption := Assumption.even : AssumptionFact })
   | `(sympyAssumption| finite) =>
       `({ assumption := Assumption.finite : AssumptionFact })
+  | `(sympyAssumption| infinite) =>
+      `({ assumption := Assumption.infinite : AssumptionFact })
+  | `(sympyAssumption| prime) =>
+      `({ assumption := Assumption.prime : AssumptionFact })
   | `(sympyAssumption| invertible) =>
       `({ assumption := Assumption.invertible : AssumptionFact })
   | _ => Macro.throwUnsupported

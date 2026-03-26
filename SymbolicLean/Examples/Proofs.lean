@@ -37,7 +37,7 @@ example :
 example :
     let x : SymDecl (Scalar Rat) := sym `x
     SymPy.Limit (((x ^ 2) - 1) / (x - 1)) x 1 =
-      Limit (((x ^ 2) - 1) / (x - 1)) x 1 := by
+      limitTerm (((x ^ 2) - 1) / (x - 1)) x 1 := by
   rfl
 
 example :

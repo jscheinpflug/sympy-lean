@@ -396,8 +396,9 @@ And through the `SymPy` namespace:
 ### 5. Calculus and structured symbolic heads
 
 These capitalized forms are pure symbolic builders. For ordinary computation or rendering, the
-recommended public workflow is the eager front-door layer such as `integrate`, `solve`, `doit`,
-`evalf`, and `latex`; use the builders when you intentionally want an unevaluated typed `Term`.
+recommended public workflow is the eager front-door layer such as `integrate`, `differentiate`,
+`limit`, `series`, `solve`, `doit`, `evalf`, and `latex`; use the builders when you intentionally
+want an unevaluated typed `Term`.
 
 #### Derivative
 
@@ -546,6 +547,27 @@ Lean:
   | .error err => IO.println (repr err)
 ```
 
+Rank:
+
+SymPy:
+```python
+from sympy import MatrixSymbol
+A = MatrixSymbol("A", 2, 2)
+A.rank()
+```
+
+Lean:
+```lean
+#eval do
+  let result ← withSession {} fun _s => do
+    symbols (A : Mat Rat 2 2)
+    let rk ← rank A
+    pretty rk
+  match result with
+  | .ok text => IO.println text
+  | .error err => IO.println (repr err)
+```
+
 Inverse:
 
 SymPy:
@@ -562,6 +584,27 @@ Lean:
     symbols (A : Mat Rat 2 2)
     let inverse ← A.I
     pretty inverse
+  match result with
+  | .ok text => IO.println text
+  | .error err => IO.println (repr err)
+```
+
+Adjugate:
+
+SymPy:
+```python
+from sympy import MatrixSymbol
+A = MatrixSymbol("A", 2, 2)
+A.adjugate()
+```
+
+Lean:
+```lean
+#eval do
+  let result ← withSession {} fun _s => do
+    symbols (A : Mat Rat 2 2)
+    let cofactors ← adjugate A
+    pretty cofactors
   match result with
   | .ok text => IO.println text
   | .error err => IO.println (repr err)

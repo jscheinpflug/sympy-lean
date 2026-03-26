@@ -4,6 +4,7 @@ open SymbolicLean
 
 #sympy_hover "FiniteSet"
 #sympy_hover "Reals"
+#sympy_hover "EmptySet"
 
 private def sameEncodedTerm (lhs rhs : Term σ) : Bool :=
   (encodeTerm lhs).compress == (encodeTerm rhs).compress
@@ -24,8 +25,26 @@ example : Term (.set (Scalar Rat)) :=
 example : Term (.set (.scalar (.ground .RR))) :=
   SymPy.S.Reals
 
+example : Term (.set (.scalar (.ground .CC))) :=
+  SymPy.S.Complexes
+
+example : Term (.set (.scalar (.ground .QQ))) :=
+  SymPy.S.Rationals
+
 example : Term (.set (.scalar (.ground .ZZ))) :=
   SymPy.S.Integers
+
+example : Term (.set (.scalar (.ground .ZZ))) :=
+  SymPy.S.Naturals
+
+example : Term (.set (.scalar (.ground .ZZ))) :=
+  SymPy.S.Naturals0
+
+example : Term (.set (Scalar Rat)) :=
+  SymPy.S.EmptySet
+
+example : Term (.set (Scalar Rat)) :=
+  SymPy.S.UniversalSet
 
 example : Term (.set (Scalar Rat)) :=
   SymPy.Interval (-1 : Int) 1
@@ -109,7 +128,10 @@ example : Term (.set (Scalar Rat)) :=
   let result ← sympy Rat do
     let intervalText ← pretty (SymPy.Interval 0 1)
     let realsText ← pretty (SymPy.S.Reals : Term (.set (.scalar (.ground .RR))))
-    pure s!"{intervalText}\n{realsText}"
+    let naturalsText ← pretty (SymPy.S.Naturals : Term (.set (.scalar (.ground .ZZ))))
+    let emptyText ← pretty (SymPy.S.EmptySet : Term (.set (Scalar Rat)))
+    let universalText ← pretty (SymPy.S.UniversalSet : Term (.set (Scalar Rat)))
+    pure s!"{intervalText}\n{realsText}\n{naturalsText}\n{emptyText}\n{universalText}"
   match result with
   | .ok text => IO.println text
   | .error err => IO.println (repr err)
@@ -171,6 +193,28 @@ noncomputable section
     symbols (x : Rat)
     assuming [x ↦ SymPy.Q.positive] do
       let answer ← x.ask SymPy.Q.positive
+      IO.println (repr answer)
+  match result with
+  | .ok _ => pure ()
+  | .error err => IO.println (repr err)
+
+-- New `Q.*` constants also work through `ask` and ordinary binder assumptions.
+#eval do
+  let result ← sympy Rat do
+    symbols (x : Rat | negative) (n : Int | even)
+    let signAnswer ← x.ask SymPy.Q.negative
+    let parityAnswer ← n.ask SymPy.Q.even
+    pure s!"{repr signAnswer}\n{repr parityAnswer}"
+  match result with
+  | .ok text => IO.println text
+  | .error err => IO.println (repr err)
+
+-- Scoped assumptions can add the new sign-style facts without changing the base declaration.
+#eval do
+  let result ← sympy Rat do
+    symbols (x : Rat)
+    assuming [x ↦ SymPy.Q.nonpositive] do
+      let answer ← x.ask SymPy.Q.nonpositive
       IO.println (repr answer)
   match result with
   | .ok _ => pure ()

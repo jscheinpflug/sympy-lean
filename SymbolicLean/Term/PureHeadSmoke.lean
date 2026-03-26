@@ -7,6 +7,12 @@ namespace SymbolicLean.Smoke
 declare_scalar_fn₁ smokeUnary => "sin" sympy_alias
   doc "Unary scalar smoke head generated through `declare_pure_head`, backed by `sympy.sin`."
 
+declare_scalar_fn₁ smokeUnaryDupA => "sin"
+  doc "Unary scalar smoke head sharing `sin` as a backend name to exercise duplicate-backend reify identity."
+
+declare_scalar_fn₁ smokeUnaryDupB => "sin"
+  doc "Second unary scalar smoke head sharing `sin` as a backend name to exercise duplicate-backend reify identity."
+
 declare_scalar_fn₂ smokeBinary => "atan2"
   doc "Binary scalar smoke head generated through `declare_pure_head`, backed by `sympy.atan2`."
 

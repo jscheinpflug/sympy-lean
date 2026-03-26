@@ -87,6 +87,14 @@ noncomputable section
     let smokeUnaryReified ← reify (← simplify smokeUnaryTerm)
     let smokeUnaryOk := sameEncodedTerm smokeUnaryReified smokeUnaryTerm.canonicalize
 
+    let smokeUnaryDupATerm : Term (Scalar Rat) := Smoke.smokeUnaryDupA x
+    let smokeUnaryDupAReified ← reify (← simplify smokeUnaryDupATerm)
+    let smokeUnaryDupAOk := sameEncodedTerm smokeUnaryDupAReified smokeUnaryDupATerm.canonicalize
+
+    let smokeUnaryDupBTerm : Term (Scalar Rat) := Smoke.smokeUnaryDupB x
+    let smokeUnaryDupBReified ← reify (← simplify smokeUnaryDupBTerm)
+    let smokeUnaryDupBOk := sameEncodedTerm smokeUnaryDupBReified smokeUnaryDupBTerm.canonicalize
+
     let smokeBinaryTerm : Term (Scalar Rat) := Smoke.smokeBinary x y
     let smokeBinaryReified ← reify (← simplify smokeBinaryTerm)
     let smokeBinaryOk := sameEncodedTerm smokeBinaryReified smokeBinaryTerm.canonicalize
@@ -97,6 +105,8 @@ noncomputable section
       , s!"integralRoundTrip={integralOk}"
       , s!"simplifyRoundTrip={simplifiedOk}"
       , s!"smokeUnaryRoundTrip={smokeUnaryOk}"
+      , s!"smokeUnaryDupARoundTrip={smokeUnaryDupAOk}"
+      , s!"smokeUnaryDupBRoundTrip={smokeUnaryDupBOk}"
       , s!"smokeBinaryRoundTrip={smokeBinaryOk}"
       ]
   match result with

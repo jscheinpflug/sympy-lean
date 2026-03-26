@@ -54,12 +54,32 @@ example : Term (Scalar Rat) :=
   | .ok text => IO.println text
   | .error err => IO.println (repr err)
 
+-- Matrix rank returns a realized integer-valued scalar expression.
+#eval do
+  let result ← withSession {} fun _s => do
+    symbols (A : Mat Rat 2 2)
+    let rk ← rank A
+    pretty rk
+  match result with
+  | .ok text => IO.println text
+  | .error err => IO.println (repr err)
+
 -- Property-style linear-algebra wrappers are available from the public front door.
 #eval do
   let result ← withSession {} fun _s => do
     symbols (A : Mat Rat 2 2)
     let inverse ← A.I
     pretty inverse
+  match result with
+  | .ok text => IO.println text
+  | .error err => IO.println (repr err)
+
+-- Adjugate also goes through the public front door for square symbolic matrices.
+#eval do
+  let result ← withSession {} fun _s => do
+    symbols (A : Mat Rat 2 2)
+    let cofactors ← adjugate A
+    pretty cofactors
   match result with
   | .ok text => IO.println text
   | .error err => IO.println (repr err)
